@@ -1,5 +1,6 @@
 package com.personalfinance.BudgetManager.Services;
 
+import com.personalfinance.BudgetManager.DTO.CreateCategoryRequest;
 import com.personalfinance.BudgetManager.Model.Category;
 import com.personalfinance.BudgetManager.Model.CategoryType;
 import com.personalfinance.BudgetManager.Repositories.CategoryRepository;
@@ -16,7 +17,12 @@ public class CategoryService {
         this.categoryRepository = categoryRepository;
     }
 
-    public Category createCategory(Category category){
+    public Category createCategory(CreateCategoryRequest request){
+        Category category = new Category();
+        category.setName(request.getName());
+        category.setDescription(request.getDescription());
+        category.setColor(request.getColor());
+        category.setType(request.getType());
         return categoryRepository.save(category);
     }
 

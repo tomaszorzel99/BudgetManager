@@ -1,8 +1,12 @@
 package com.personalfinance.BudgetManager.Services;
 
+import com.personalfinance.BudgetManager.DTO.CreateAccountRequest;
 import com.personalfinance.BudgetManager.Exception.AccountException;
+import com.personalfinance.BudgetManager.Exception.UserException;
 import com.personalfinance.BudgetManager.Model.Account;
+import com.personalfinance.BudgetManager.Model.User;
 import com.personalfinance.BudgetManager.Repositories.AccountRepository;
+import com.personalfinance.BudgetManager.Repositories.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -12,12 +16,23 @@ public class AccountService {
 
 
     private final AccountRepository accountRepository;
+    private final UserRepository userRepository;
 
-    public AccountService(AccountRepository accountRepository) {
+    public AccountService(AccountRepository accountRepository, UserRepository userRepository) {
         this.accountRepository = accountRepository;
+        this.userRepository = userRepository;
     }
 
-    public Account createAccount(Account account) {
+    public Account createAccount(CreateAccountRequest request) {
+        User user = userRepository.findById(request.getUserId()).
+                orElseThrow(() -> new UserException(request.getUserId()));
+
+        Account account = new Account();
+        account.setName(request.getName());
+        account.setAccountNumber(request.getAccountNumber());
+        account.setCurrency(request.getCurrency());
+        account.setBalance(request.getBalance());
+        account.setUser(user);
         return accountRepository.save(account);
     }
 

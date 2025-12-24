@@ -40,6 +40,7 @@ public class TransactionService {
                 orElseThrow(() -> new CategoryException(request.getCategoryId()));
         Subcategory subcategory = subcategoryRepository.findById(request.getSubcategoryId()).
                 orElseThrow(() -> new SubcategoryException(request.getSubcategoryId()));
+
         Transaction transaction = new Transaction();
         transaction.setAmount(request.getAmount());
         transaction.setType(request.getType());

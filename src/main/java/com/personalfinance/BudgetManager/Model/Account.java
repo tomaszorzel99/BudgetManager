@@ -40,7 +40,7 @@ public class Account {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    private User owner;
+    private User user;
 
     @PrePersist
     public void prePersist() {
@@ -49,5 +49,4 @@ public class Account {
             this.balance = BigDecimal.ZERO;
         }
     }
-
 }

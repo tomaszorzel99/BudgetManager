@@ -1,5 +1,7 @@
 package com.personalfinance.BudgetManager.Services;
 
+import com.personalfinance.BudgetManager.DTO.CreateUserRequest;
+import com.personalfinance.BudgetManager.Exception.UserException;
 import com.personalfinance.BudgetManager.Model.User;
 import com.personalfinance.BudgetManager.Repositories.UserRepository;
 import org.springframework.stereotype.Service;
@@ -16,7 +18,11 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
-    public User createUser(User user) {
+    public User createUser(CreateUserRequest request) {
+        User user = new User();
+        user.setName(request.getName());
+        user.setEmail(request.getEmail());
+        user.setPassword(request.getPassword());
         return userRepository.save(user);
     }
 
@@ -24,21 +30,16 @@ public class UserService {
         return userRepository.findAll();
     }
 
-    public User getUsersById(Long id) {
-        return userRepository.findById(id).orElseThrow(() -> new UserNotFoundException(id));
+    public User getUserById(Long id) {
+        return userRepository.findById(id).orElseThrow(() -> new UserException(id));
     }
 
     public Optional<User> getUserByEmail(String email){
         return userRepository.findByEmail(email);
     }
+
     public void deleteUser (Long id) {
         userRepository.deleteById(id);
-    }
-
-    public static class UserNotFoundException extends RuntimeException {
-        public UserNotFoundException(Long id) {
-            super("User not found with id: " + id);
-        }
     }
 }
 
