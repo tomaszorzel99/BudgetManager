@@ -45,7 +45,7 @@ public class AccountService {
     }
 
     public List<Account> getAccountsByOwnerId(Long userId) {
-        return accountRepository.findByOwnerId(userId);
+        return accountRepository.findByUserId(userId);
     }
 
     public void deleteAccount(Long id) {

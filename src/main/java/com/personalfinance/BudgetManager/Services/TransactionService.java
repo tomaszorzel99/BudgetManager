@@ -1,6 +1,7 @@
 package com.personalfinance.BudgetManager.Services;
 
 import com.personalfinance.BudgetManager.DTO.CreateTransactionRequest;
+import com.personalfinance.BudgetManager.DTO.TransactionDTO;
 import com.personalfinance.BudgetManager.Exception.CategoryException;
 import com.personalfinance.BudgetManager.Exception.SubcategoryException;
 import com.personalfinance.BudgetManager.Exception.UserException;
@@ -9,6 +10,7 @@ import com.personalfinance.BudgetManager.Repositories.CategoryRepository;
 import com.personalfinance.BudgetManager.Repositories.SubcategoryRepository;
 import com.personalfinance.BudgetManager.Repositories.TransactionRepository;
 import com.personalfinance.BudgetManager.Repositories.UserRepository;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;

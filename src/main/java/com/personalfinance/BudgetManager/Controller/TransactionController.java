@@ -2,6 +2,7 @@ package com.personalfinance.BudgetManager.Controller;
 
 import com.personalfinance.BudgetManager.DTO.CreateTransactionRequest;
 import com.personalfinance.BudgetManager.DTO.TransactionDTO;
+import com.personalfinance.BudgetManager.Mapper.TransactionMapper;
 import com.personalfinance.BudgetManager.Model.Transaction;
 import com.personalfinance.BudgetManager.Services.TransactionService;
 import jakarta.validation.Valid;
@@ -16,34 +17,22 @@ import java.util.List;
 public class TransactionController {
 
     private final TransactionService transactionService;
+    private final TransactionMapper transactionMapper;
 
-    public TransactionController(TransactionService transactionService) {
+    public TransactionController(TransactionService transactionService, TransactionMapper transactionMapper) {
         this.transactionService = transactionService;
+        this.transactionMapper = transactionMapper;
     }
 
     @PostMapping
     public ResponseEntity<TransactionDTO> createTransaction(@Valid @RequestBody CreateTransactionRequest request){
         Transaction transaction = transactionService.createTransaction(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(convertToDTO(transaction));
+        return ResponseEntity.status(HttpStatus.CREATED).body(transactionMapper.convertToDTO(transaction));
     }
 
-    private TransactionDTO convertToDTO(Transaction transaction){
-        TransactionDTO dto = new TransactionDTO();
-        dto.setId(transaction.getId());
-        dto.setAmount(transaction.getAmount());
-        dto.setType(transaction.getType());
-        dto.setDescription(transaction.getDescription());
-        dto.setNotes(transaction.getNotes());
-        dto.setTransactionDate(transaction.getTransactionDate());
-        dto.setUserName(transaction.getUser().getName());
-        dto.setCategoryName(transaction.getCategory().getName());
-        dto.setSubcategoryName(transaction.getSubcategory().getName());
-        return dto;
-    }
-
-    private List<TransactionDTO> convertToLisDTO(List<Transaction> transactions){
-        return transactions.stream()
-                .map(this::convertToDTO)
-                .toList();
+    @GetMapping
+    public ResponseEntity<List<TransactionDTO>> getTransactions(){
+        List<Transaction> allTransactions = transactionService.getAllTransactions();
+        return ResponseEntity.ok(transactionMapper.convertToLisDTO(allTransactions));
     }
 }
