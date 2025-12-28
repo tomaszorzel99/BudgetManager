@@ -36,7 +36,7 @@ public class SubcategoryService {
         return subcategoryRepository.findAll();
     }
 
-    public List<Subcategory> getSubcategoriesByCategoryId(Long categoryId) {
-        return subcategoryRepository.findByCategoryId(categoryId);
+    public List<Subcategory> getSubcategoriesByCategoryName(String categoryName) {
+        return subcategoryRepository.findByCategoryName(categoryName);
     }
 }

@@ -5,6 +5,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 public class TransactionDTO {
@@ -13,7 +14,8 @@ public class TransactionDTO {
     private CategoryType type;
     private String description;
     private String notes;
-    private LocalDate transactionDate;
+    private LocalDateTime createdDate;
+    private Long accountId;
     private String userName;
     private String categoryName;
     private String subcategoryName;

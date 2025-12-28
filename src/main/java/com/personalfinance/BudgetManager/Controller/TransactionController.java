@@ -33,6 +33,6 @@ public class TransactionController {
     @GetMapping
     public ResponseEntity<List<TransactionDTO>> getTransactions(){
         List<Transaction> allTransactions = transactionService.getAllTransactions();
-        return ResponseEntity.ok(transactionMapper.convertToLisDTO(allTransactions));
+        return ResponseEntity.ok(transactionMapper.convertToListDTO(allTransactions));
     }
 }

@@ -61,11 +61,6 @@ public class Transaction {
     @PrePersist
     public void prePersist() {
         this.createdDate = LocalDateTime.now();
+        this.transactionDate = LocalDate.now();
     }
-
-
-
-
-
-
 }

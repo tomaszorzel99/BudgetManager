@@ -3,6 +3,7 @@ package com.personalfinance.BudgetManager.Model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jdk.jfr.Timestamp;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -33,7 +34,7 @@ public class User {
     @NotBlank(message = "Password cannot be blank")
     private String password;
 
-    @Column(name = "Created_date")
+    @Column(name = "Created_date", updatable = false, nullable = false)
     private LocalDateTime createData;
 
     @PrePersist

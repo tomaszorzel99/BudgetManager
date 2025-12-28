@@ -11,6 +11,7 @@ import java.util.List;
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
     List<Transaction> findByUserId(Long userId);
+    List<Transaction> findByUserEmail(String userEmail);
     List<Transaction> findByUserIdAndTransactionDateBetween(Long userId, LocalDate startDate, LocalDate endDate);
     List<Transaction> findByUserIdAndType(Long userId, CategoryType type);
     List<Transaction> findByUserIdAndCategoryId(Long userId, Long categoryId);

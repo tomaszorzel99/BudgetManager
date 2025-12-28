@@ -1,16 +1,12 @@
 package com.personalfinance.BudgetManager.Services;
 
 import com.personalfinance.BudgetManager.DTO.CreateTransactionRequest;
-import com.personalfinance.BudgetManager.DTO.TransactionDTO;
+import com.personalfinance.BudgetManager.Exception.AccountException;
 import com.personalfinance.BudgetManager.Exception.CategoryException;
 import com.personalfinance.BudgetManager.Exception.SubcategoryException;
 import com.personalfinance.BudgetManager.Exception.UserException;
 import com.personalfinance.BudgetManager.Model.*;
-import com.personalfinance.BudgetManager.Repositories.CategoryRepository;
-import com.personalfinance.BudgetManager.Repositories.SubcategoryRepository;
-import com.personalfinance.BudgetManager.Repositories.TransactionRepository;
-import com.personalfinance.BudgetManager.Repositories.UserRepository;
-import org.springframework.http.ResponseEntity;
+import com.personalfinance.BudgetManager.Repositories.*;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -23,34 +19,34 @@ public class TransactionService {
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
     private final SubcategoryRepository subcategoryRepository;
+    private final AccountRepository accountRepository;
 
-    public TransactionService(TransactionRepository transactionRepository, UserRepository userRepository, CategoryRepository categoryRepository, SubcategoryRepository subcategoryRepository) {
+    public TransactionService(TransactionRepository transactionRepository, UserRepository userRepository, CategoryRepository categoryRepository, SubcategoryRepository subcategoryRepository, AccountRepository accountRepository) {
         this.transactionRepository = transactionRepository;
         this.userRepository = userRepository;
         this.categoryRepository = categoryRepository;
         this.subcategoryRepository = subcategoryRepository;
+        this.accountRepository = accountRepository;
     }
 
-//    public TransactionService(TransactionRepository transactionRepository) {
-//        this.transactionRepository = transactionRepository;
-//    }
-
     public Transaction createTransaction(CreateTransactionRequest request){
-        User user = userRepository.findById(request.getUserId()).
-                orElseThrow(() -> new UserException(request.getUserId()));
-        Category category = categoryRepository.findById(request.getCategoryId()).
-                orElseThrow(() -> new CategoryException(request.getCategoryId()));
-        Subcategory subcategory = subcategoryRepository.findById(request.getSubcategoryId()).
-                orElseThrow(() -> new SubcategoryException(request.getSubcategoryId()));
+        Account account = accountRepository.findById(request.getAccountId())
+                .orElseThrow(() -> new AccountException(request.getAccountId()));
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new UserException(request.getUserId()));
+        Category category = categoryRepository.findById(request.getCategoryId())
+                .orElseThrow(() -> new CategoryException(request.getCategoryId()));
+        Subcategory subcategory = subcategoryRepository.findById(request.getSubcategoryId())
+                .orElseThrow(() -> new SubcategoryException(request.getSubcategoryId()));
 
         Transaction transaction = new Transaction();
         transaction.setAmount(request.getAmount());
         transaction.setType(request.getType());
-        transaction.setTransactionDate(request.getTransactionDate());
         transaction.setDescription(request.getDescription());
         transaction.setUser(user);
         transaction.setCategory(category);
         transaction.setSubcategory(subcategory);
+        transaction.setAccount(account);
 
         return transactionRepository.save(transaction);
     }

@@ -17,7 +17,6 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
 public class Account {
 
     @Id
@@ -27,6 +26,7 @@ public class Account {
     @NotBlank(message = "Account name cannot be blank")
     private String name;
 
+    @Column(unique = true)
     private String accountNumber;
 
     @NotBlank(message = "Currence cannot be blank")

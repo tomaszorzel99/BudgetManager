@@ -15,14 +15,15 @@ public class TransactionMapper {
         transactionDTO.setType(transaction.getType());
         transactionDTO.setDescription(transaction.getDescription());
         transactionDTO.setNotes(transaction.getNotes());
-        transactionDTO.setTransactionDate(transaction.getTransactionDate());
+        transactionDTO.setCreatedDate(transaction.getCreatedDate());
         transactionDTO.setUserName(transaction.getUser().getName());
         transactionDTO.setCategoryName(transaction.getCategory().getName());
         transactionDTO.setSubcategoryName(transaction.getSubcategory().getName());
+        transactionDTO.setAccountId(transaction.getAccount().getId());
         return transactionDTO;
     }
 
-    public List<TransactionDTO> convertToLisDTO(List<Transaction> transactions){
+    public List<TransactionDTO> convertToListDTO(List<Transaction> transactions){
         return transactions.stream()
                 .map(this::convertToDTO)
                 .toList();

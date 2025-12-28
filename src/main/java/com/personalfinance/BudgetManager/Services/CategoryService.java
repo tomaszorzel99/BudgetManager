@@ -7,6 +7,7 @@ import com.personalfinance.BudgetManager.Repositories.CategoryRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class CategoryService {
@@ -32,6 +33,10 @@ public class CategoryService {
 
     public List<Category> getCategoriesByType(CategoryType type) {
         return categoryRepository.findByType(type);
+    }
+
+    public Optional<Category> getCategoryById(Long id){
+        return categoryRepository.findById(id);
     }
 
 }

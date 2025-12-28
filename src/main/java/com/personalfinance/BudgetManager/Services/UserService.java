@@ -34,11 +34,11 @@ public class UserService {
         return userRepository.findById(id).orElseThrow(() -> new UserException(id));
     }
 
-    public Optional<User> getUserByEmail(String email){
+    public Optional<User> getUserByEmail(String email) {
         return userRepository.findByEmail(email);
     }
 
-    public void deleteUser (Long id) {
+    public void deleteUser(Long id) {
         userRepository.deleteById(id);
     }
 }
