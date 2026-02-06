@@ -2,6 +2,7 @@ package com.personalfinance.BudgetManager.Services;
 
 import com.personalfinance.BudgetManager.DTO.CreateSubcategoryRequest;
 import com.personalfinance.BudgetManager.Exception.CategoryException;
+import com.personalfinance.BudgetManager.Exception.SubcategoryException;
 import com.personalfinance.BudgetManager.Model.Category;
 import com.personalfinance.BudgetManager.Model.Subcategory;
 import com.personalfinance.BudgetManager.Repositories.CategoryRepository;
@@ -38,5 +39,10 @@ public class SubcategoryService {
 
     public List<Subcategory> getSubcategoriesByCategoryName(String categoryName) {
         return subcategoryRepository.findByCategoryName(categoryName);
+    }
+
+    public void deleteSubcategoriesById(Long id){
+        Subcategory subcategory = subcategoryRepository.findById(id).orElseThrow(() -> new SubcategoryException(id));
+        subcategoryRepository.delete(subcategory);
     }
 }

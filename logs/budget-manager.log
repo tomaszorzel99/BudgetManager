@@ -1,0 +1,364 @@
+2026-02-06T00:56:30.176+01:00  WARN 3023 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=59m44s882ms).
+2026-02-06T01:13:25.985+01:00  WARN 3023 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=16m55s810ms).
+2026-02-06T02:36:23.160+01:00  WARN 3023 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1h22m57s176ms).
+2026-02-06T03:18:16.374+01:00  WARN 3023 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=41m53s214ms).
+2026-02-06T04:26:35.631+01:00  WARN 3023 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1h8m19s257ms).
+2026-02-06T06:06:59.535+01:00  WARN 3023 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1h40m23s903ms).
+2026-02-06T07:01:57.180+01:00  WARN 3023 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=54m57s646ms).
+2026-02-06T07:06:19.839+01:00  WARN 3023 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=4m22s659ms).
+2026-02-06T07:09:00.018+01:00  WARN 3023 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=2m40s179ms).
+2026-02-06T07:13:28.289+01:00  WARN 3023 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=4m28s271ms).
+2026-02-06T07:21:21.801+01:00  WARN 3023 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=7m53s512ms).
+2026-02-06T07:48:53.928+01:00  WARN 3023 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=27m32s127ms).
+2026-02-06T08:05:52.622+01:00  WARN 3023 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=16m58s694ms).
+2026-02-06T08:09:46.724+01:00  WARN 3023 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=3m54s102ms).
+2026-02-06T08:13:59.293+01:00  WARN 3023 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=4m12s569ms).
+2026-02-06T08:56:10.092+01:00  WARN 3023 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=14m40s564ms).
+2026-02-06T08:57:22.289+01:00  WARN 3023 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1m12s198ms).
+2026-02-06T09:00:32.827+01:00  INFO 3023 --- [BudgetManager] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-02-06T09:00:32.833+01:00  INFO 3023 --- [BudgetManager] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-02-06T09:00:32.838+01:00  INFO 3023 --- [BudgetManager] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-02-06T09:00:32.840+01:00  INFO 3023 --- [BudgetManager] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-02-06T09:00:32.844+01:00  INFO 3023 --- [BudgetManager] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-02-06T09:00:34.681+01:00  INFO 5914 --- [BudgetManager] [main] c.p.B.BudgetManagerApplication           : Starting BudgetManagerApplication using Java 25.0.1 with PID 5914 (/Users/TomaszOrzel/ProjektyJava/FinanceManager/BudgetManager/target/classes started by TomaszOrzel in /Users/TomaszOrzel/ProjektyJava/FinanceManager/BudgetManager)
+2026-02-06T09:00:34.681+01:00  INFO 5914 --- [BudgetManager] [main] c.p.B.BudgetManagerApplication           : No active profile set, falling back to 1 default profile: "default"
+2026-02-06T09:00:35.007+01:00  INFO 5914 --- [BudgetManager] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-02-06T09:00:35.032+01:00  INFO 5914 --- [BudgetManager] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 21 ms. Found 7 JPA repository interfaces.
+2026-02-06T09:00:35.276+01:00  INFO 5914 --- [BudgetManager] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-02-06T09:00:35.283+01:00  INFO 5914 --- [BudgetManager] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-02-06T09:00:35.285+01:00  INFO 5914 --- [BudgetManager] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.48]
+2026-02-06T09:00:35.303+01:00  INFO 5914 --- [BudgetManager] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-02-06T09:00:35.304+01:00  INFO 5914 --- [BudgetManager] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 597 ms
+2026-02-06T09:00:35.354+01:00  INFO 5914 --- [BudgetManager] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-02-06T09:00:35.379+01:00  INFO 5914 --- [BudgetManager] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.33.Final
+2026-02-06T09:00:35.394+01:00  INFO 5914 --- [BudgetManager] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-02-06T09:00:35.515+01:00  INFO 5914 --- [BudgetManager] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-02-06T09:00:35.528+01:00  INFO 5914 --- [BudgetManager] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-02-06T09:00:35.740+01:00  INFO 5914 --- [BudgetManager] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@30c8c6ab
+2026-02-06T09:00:35.741+01:00  INFO 5914 --- [BudgetManager] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-02-06T09:00:35.778+01:00  WARN 5914 --- [BudgetManager] [main] org.hibernate.orm.deprecation            : HHH90000025: MySQL8Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-02-06T09:00:35.779+01:00  WARN 5914 --- [BudgetManager] [main] org.hibernate.orm.deprecation            : HHH90000026: MySQL8Dialect has been deprecated; use org.hibernate.dialect.MySQLDialect instead
+2026-02-06T09:00:35.785+01:00  INFO 5914 --- [BudgetManager] [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 8.0
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-02-06T09:00:36.191+01:00  INFO 5914 --- [BudgetManager] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-02-06T09:00:36.264+01:00  INFO 5914 --- [BudgetManager] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-02-06T09:00:36.418+01:00  INFO 5914 --- [BudgetManager] [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2026-02-06T09:00:36.449+01:00  INFO 5914 --- [BudgetManager] [main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-02-06T09:00:37.089+01:00  WARN 5914 --- [BudgetManager] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-02-06T09:00:37.260+01:00  INFO 5914 --- [BudgetManager] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-02-06T09:00:37.264+01:00  INFO 5914 --- [BudgetManager] [main] c.p.B.BudgetManagerApplication           : Started BudgetManagerApplication in 2.784 seconds (process running for 2.972)
+2026-02-06T09:01:47.352+01:00  INFO 5914 --- [BudgetManager] [http-nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-02-06T09:01:47.353+01:00  INFO 5914 --- [BudgetManager] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-02-06T09:01:47.359+01:00  INFO 5914 --- [BudgetManager] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 6 ms
+2026-02-06T09:17:53.006+01:00  INFO 5914 --- [BudgetManager] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-02-06T09:17:53.011+01:00  INFO 5914 --- [BudgetManager] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-02-06T09:17:53.015+01:00  INFO 5914 --- [BudgetManager] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-02-06T09:17:53.016+01:00  INFO 5914 --- [BudgetManager] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-02-06T09:17:53.020+01:00  INFO 5914 --- [BudgetManager] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-02-06T09:17:55.243+01:00  INFO 6198 --- [BudgetManager] [main] c.p.B.BudgetManagerApplication           : Starting BudgetManagerApplication using Java 25.0.1 with PID 6198 (/Users/TomaszOrzel/ProjektyJava/FinanceManager/BudgetManager/target/classes started by TomaszOrzel in /Users/TomaszOrzel/ProjektyJava/FinanceManager/BudgetManager)
+2026-02-06T09:17:55.245+01:00  INFO 6198 --- [BudgetManager] [main] c.p.B.BudgetManagerApplication           : No active profile set, falling back to 1 default profile: "default"
+2026-02-06T09:17:55.560+01:00  INFO 6198 --- [BudgetManager] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-02-06T09:17:55.585+01:00  INFO 6198 --- [BudgetManager] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 21 ms. Found 7 JPA repository interfaces.
+2026-02-06T09:17:55.820+01:00  INFO 6198 --- [BudgetManager] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-02-06T09:17:55.827+01:00  INFO 6198 --- [BudgetManager] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-02-06T09:17:55.827+01:00  INFO 6198 --- [BudgetManager] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.48]
+2026-02-06T09:17:55.844+01:00  INFO 6198 --- [BudgetManager] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-02-06T09:17:55.844+01:00  INFO 6198 --- [BudgetManager] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 562 ms
+2026-02-06T09:17:55.893+01:00  INFO 6198 --- [BudgetManager] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-02-06T09:17:55.916+01:00  INFO 6198 --- [BudgetManager] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.33.Final
+2026-02-06T09:17:55.929+01:00  INFO 6198 --- [BudgetManager] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-02-06T09:17:56.047+01:00  INFO 6198 --- [BudgetManager] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-02-06T09:17:56.060+01:00  INFO 6198 --- [BudgetManager] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-02-06T09:17:56.230+01:00  INFO 6198 --- [BudgetManager] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@19ec5357
+2026-02-06T09:17:56.231+01:00  INFO 6198 --- [BudgetManager] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-02-06T09:17:56.252+01:00  WARN 6198 --- [BudgetManager] [main] org.hibernate.orm.deprecation            : HHH90000025: MySQL8Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-02-06T09:17:56.252+01:00  WARN 6198 --- [BudgetManager] [main] org.hibernate.orm.deprecation            : HHH90000026: MySQL8Dialect has been deprecated; use org.hibernate.dialect.MySQLDialect instead
+2026-02-06T09:17:56.259+01:00  INFO 6198 --- [BudgetManager] [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 8.0
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-02-06T09:17:56.667+01:00  INFO 6198 --- [BudgetManager] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-02-06T09:17:56.737+01:00  INFO 6198 --- [BudgetManager] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-02-06T09:17:56.884+01:00  INFO 6198 --- [BudgetManager] [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2026-02-06T09:17:56.914+01:00  INFO 6198 --- [BudgetManager] [main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-02-06T09:17:57.589+01:00  WARN 6198 --- [BudgetManager] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-02-06T09:17:57.767+01:00  INFO 6198 --- [BudgetManager] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-02-06T09:17:57.771+01:00  INFO 6198 --- [BudgetManager] [main] c.p.B.BudgetManagerApplication           : Started BudgetManagerApplication in 2.73 seconds (process running for 2.927)
+2026-02-06T09:18:47.874+01:00  INFO 6198 --- [BudgetManager] [http-nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-02-06T09:18:47.874+01:00  INFO 6198 --- [BudgetManager] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-02-06T09:18:47.875+01:00  INFO 6198 --- [BudgetManager] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-02-06T09:18:47.952+01:00  WARN 6198 --- [BudgetManager] [http-nio-8080-exec-1] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.bind.MethodArgumentNotValidException: Validation failed for argument [0] in public org.springframework.http.ResponseEntity<java.lang.Void> com.personalfinance.BudgetManager.Controller.AuthController.register(com.personalfinance.BudgetManager.DTO.RegisterRequest): [Field error in object 'registerRequest' on field 'name': rejected value [null]; codes [NotBlank.registerRequest.name,NotBlank.name,NotBlank.java.lang.String,NotBlank]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [registerRequest.name,name]; arguments []; default message [name]]; default message [nie może być odstępem]] ]
+2026-02-06T09:19:11.997+01:00  INFO 6198 --- [BudgetManager] [http-nio-8080-exec-3] c.p.BudgetManager.Services.AuthService   : Attempting to register new user with email: zuza020299@onet.pl
+2026-02-06T09:19:12.426+01:00  INFO 6198 --- [BudgetManager] [http-nio-8080-exec-3] c.p.BudgetManager.Services.AuthService   : User zuza020299@onet.pl successfully registered
+2026-02-06T09:37:13.504+01:00  WARN 6198 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=2m17s7ms).
+2026-02-06T10:09:24.038+01:00  WARN 6198 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=4m10s337ms).
+2026-02-06T10:14:01.920+01:00  INFO 6198 --- [BudgetManager] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-02-06T10:14:01.926+01:00  INFO 6198 --- [BudgetManager] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-02-06T10:14:01.930+01:00  INFO 6198 --- [BudgetManager] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-02-06T10:14:01.932+01:00  INFO 6198 --- [BudgetManager] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-02-06T10:14:01.933+01:00  INFO 6198 --- [BudgetManager] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-02-06T10:14:03.666+01:00  INFO 7055 --- [BudgetManager] [main] c.p.B.BudgetManagerApplication           : Starting BudgetManagerApplication using Java 25.0.1 with PID 7055 (/Users/TomaszOrzel/ProjektyJava/FinanceManager/BudgetManager/target/classes started by TomaszOrzel in /Users/TomaszOrzel/ProjektyJava/FinanceManager/BudgetManager)
+2026-02-06T10:14:03.666+01:00  INFO 7055 --- [BudgetManager] [main] c.p.B.BudgetManagerApplication           : No active profile set, falling back to 1 default profile: "default"
+2026-02-06T10:14:03.978+01:00  INFO 7055 --- [BudgetManager] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-02-06T10:14:04.004+01:00  INFO 7055 --- [BudgetManager] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 22 ms. Found 7 JPA repository interfaces.
+2026-02-06T10:14:04.249+01:00  INFO 7055 --- [BudgetManager] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-02-06T10:14:04.256+01:00  INFO 7055 --- [BudgetManager] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-02-06T10:14:04.256+01:00  INFO 7055 --- [BudgetManager] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.48]
+2026-02-06T10:14:04.273+01:00  INFO 7055 --- [BudgetManager] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-02-06T10:14:04.273+01:00  INFO 7055 --- [BudgetManager] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 583 ms
+2026-02-06T10:14:04.323+01:00  INFO 7055 --- [BudgetManager] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-02-06T10:14:04.348+01:00  INFO 7055 --- [BudgetManager] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.33.Final
+2026-02-06T10:14:04.361+01:00  INFO 7055 --- [BudgetManager] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-02-06T10:14:04.480+01:00  INFO 7055 --- [BudgetManager] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-02-06T10:14:04.493+01:00  INFO 7055 --- [BudgetManager] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-02-06T10:14:04.665+01:00  INFO 7055 --- [BudgetManager] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@30c8c6ab
+2026-02-06T10:14:04.666+01:00  INFO 7055 --- [BudgetManager] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-02-06T10:14:04.701+01:00  WARN 7055 --- [BudgetManager] [main] org.hibernate.orm.deprecation            : HHH90000025: MySQL8Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-02-06T10:14:04.702+01:00  WARN 7055 --- [BudgetManager] [main] org.hibernate.orm.deprecation            : HHH90000026: MySQL8Dialect has been deprecated; use org.hibernate.dialect.MySQLDialect instead
+2026-02-06T10:14:04.708+01:00  INFO 7055 --- [BudgetManager] [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 8.0
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-02-06T10:14:05.119+01:00  INFO 7055 --- [BudgetManager] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-02-06T10:14:05.194+01:00  INFO 7055 --- [BudgetManager] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-02-06T10:14:05.358+01:00  INFO 7055 --- [BudgetManager] [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2026-02-06T10:14:05.389+01:00  INFO 7055 --- [BudgetManager] [main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-02-06T10:14:06.063+01:00  WARN 7055 --- [BudgetManager] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-02-06T10:14:06.235+01:00  INFO 7055 --- [BudgetManager] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-02-06T10:14:06.239+01:00  INFO 7055 --- [BudgetManager] [main] c.p.B.BudgetManagerApplication           : Started BudgetManagerApplication in 2.767 seconds (process running for 2.95)
+2026-02-06T10:14:09.938+01:00  INFO 7055 --- [BudgetManager] [http-nio-8080-exec-2] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-02-06T10:14:09.939+01:00  INFO 7055 --- [BudgetManager] [http-nio-8080-exec-2] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-02-06T10:14:09.940+01:00  INFO 7055 --- [BudgetManager] [http-nio-8080-exec-2] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-02-06T10:18:59.282+01:00  INFO 7055 --- [BudgetManager] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-02-06T10:18:59.287+01:00  INFO 7055 --- [BudgetManager] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-02-06T10:18:59.290+01:00  INFO 7055 --- [BudgetManager] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-02-06T10:18:59.292+01:00  INFO 7055 --- [BudgetManager] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-02-06T10:18:59.295+01:00  INFO 7055 --- [BudgetManager] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-02-06T10:19:00.294+01:00  INFO 7131 --- [BudgetManager] [main] c.p.B.BudgetManagerApplication           : Starting BudgetManagerApplication using Java 25.0.1 with PID 7131 (/Users/TomaszOrzel/ProjektyJava/FinanceManager/BudgetManager/target/classes started by TomaszOrzel in /Users/TomaszOrzel/ProjektyJava/FinanceManager/BudgetManager)
+2026-02-06T10:19:00.294+01:00  INFO 7131 --- [BudgetManager] [main] c.p.B.BudgetManagerApplication           : No active profile set, falling back to 1 default profile: "default"
+2026-02-06T10:19:00.625+01:00  INFO 7131 --- [BudgetManager] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-02-06T10:19:00.651+01:00  INFO 7131 --- [BudgetManager] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 22 ms. Found 7 JPA repository interfaces.
+2026-02-06T10:19:00.905+01:00  INFO 7131 --- [BudgetManager] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-02-06T10:19:00.911+01:00  INFO 7131 --- [BudgetManager] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-02-06T10:19:00.911+01:00  INFO 7131 --- [BudgetManager] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.48]
+2026-02-06T10:19:00.929+01:00  INFO 7131 --- [BudgetManager] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-02-06T10:19:00.929+01:00  INFO 7131 --- [BudgetManager] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 612 ms
+2026-02-06T10:19:00.974+01:00  INFO 7131 --- [BudgetManager] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-02-06T10:19:00.993+01:00  INFO 7131 --- [BudgetManager] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.33.Final
+2026-02-06T10:19:01.003+01:00  INFO 7131 --- [BudgetManager] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-02-06T10:19:01.110+01:00  INFO 7131 --- [BudgetManager] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-02-06T10:19:01.121+01:00  INFO 7131 --- [BudgetManager] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-02-06T10:19:01.270+01:00  INFO 7131 --- [BudgetManager] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@61c5fd78
+2026-02-06T10:19:01.271+01:00  INFO 7131 --- [BudgetManager] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-02-06T10:19:01.290+01:00  WARN 7131 --- [BudgetManager] [main] org.hibernate.orm.deprecation            : HHH90000025: MySQL8Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-02-06T10:19:01.291+01:00  WARN 7131 --- [BudgetManager] [main] org.hibernate.orm.deprecation            : HHH90000026: MySQL8Dialect has been deprecated; use org.hibernate.dialect.MySQLDialect instead
+2026-02-06T10:19:01.296+01:00  INFO 7131 --- [BudgetManager] [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 8.0
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-02-06T10:19:01.691+01:00  INFO 7131 --- [BudgetManager] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-02-06T10:19:01.766+01:00  INFO 7131 --- [BudgetManager] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-02-06T10:19:01.919+01:00  INFO 7131 --- [BudgetManager] [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2026-02-06T10:19:01.949+01:00  INFO 7131 --- [BudgetManager] [main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-02-06T10:19:02.594+01:00  WARN 7131 --- [BudgetManager] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-02-06T10:19:02.767+01:00  INFO 7131 --- [BudgetManager] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-02-06T10:19:02.771+01:00  INFO 7131 --- [BudgetManager] [main] c.p.B.BudgetManagerApplication           : Started BudgetManagerApplication in 2.668 seconds (process running for 2.834)
+2026-02-06T10:19:06.040+01:00  INFO 7131 --- [BudgetManager] [http-nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-02-06T10:19:06.040+01:00  INFO 7131 --- [BudgetManager] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-02-06T10:19:06.041+01:00  INFO 7131 --- [BudgetManager] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-02-06T10:32:02.011+01:00  INFO 7131 --- [BudgetManager] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-02-06T10:32:02.016+01:00  INFO 7131 --- [BudgetManager] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-02-06T10:32:02.020+01:00  INFO 7131 --- [BudgetManager] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-02-06T10:32:02.022+01:00  INFO 7131 --- [BudgetManager] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-02-06T10:32:02.026+01:00  INFO 7131 --- [BudgetManager] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-02-06T10:32:03.546+01:00  INFO 7445 --- [BudgetManager] [main] c.p.B.BudgetManagerApplication           : Starting BudgetManagerApplication using Java 25.0.1 with PID 7445 (/Users/TomaszOrzel/ProjektyJava/FinanceManager/BudgetManager/target/classes started by TomaszOrzel in /Users/TomaszOrzel/ProjektyJava/FinanceManager/BudgetManager)
+2026-02-06T10:32:03.547+01:00  INFO 7445 --- [BudgetManager] [main] c.p.B.BudgetManagerApplication           : No active profile set, falling back to 1 default profile: "default"
+2026-02-06T10:32:03.826+01:00  INFO 7445 --- [BudgetManager] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-02-06T10:32:03.851+01:00  INFO 7445 --- [BudgetManager] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 21 ms. Found 7 JPA repository interfaces.
+2026-02-06T10:32:04.073+01:00  INFO 7445 --- [BudgetManager] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-02-06T10:32:04.079+01:00  INFO 7445 --- [BudgetManager] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-02-06T10:32:04.079+01:00  INFO 7445 --- [BudgetManager] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.48]
+2026-02-06T10:32:04.096+01:00  INFO 7445 --- [BudgetManager] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-02-06T10:32:04.096+01:00  INFO 7445 --- [BudgetManager] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 527 ms
+2026-02-06T10:32:04.142+01:00  INFO 7445 --- [BudgetManager] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-02-06T10:32:04.161+01:00  INFO 7445 --- [BudgetManager] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.33.Final
+2026-02-06T10:32:04.172+01:00  INFO 7445 --- [BudgetManager] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-02-06T10:32:04.277+01:00  INFO 7445 --- [BudgetManager] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-02-06T10:32:04.289+01:00  INFO 7445 --- [BudgetManager] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-02-06T10:32:04.437+01:00  INFO 7445 --- [BudgetManager] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@42503099
+2026-02-06T10:32:04.437+01:00  INFO 7445 --- [BudgetManager] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-02-06T10:32:04.461+01:00  WARN 7445 --- [BudgetManager] [main] org.hibernate.orm.deprecation            : HHH90000025: MySQL8Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-02-06T10:32:04.461+01:00  WARN 7445 --- [BudgetManager] [main] org.hibernate.orm.deprecation            : HHH90000026: MySQL8Dialect has been deprecated; use org.hibernate.dialect.MySQLDialect instead
+2026-02-06T10:32:04.467+01:00  INFO 7445 --- [BudgetManager] [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 8.0
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-02-06T10:32:04.855+01:00  INFO 7445 --- [BudgetManager] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-02-06T10:32:04.929+01:00  INFO 7445 --- [BudgetManager] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-02-06T10:32:05.080+01:00  INFO 7445 --- [BudgetManager] [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2026-02-06T10:32:05.113+01:00  INFO 7445 --- [BudgetManager] [main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-02-06T10:32:05.759+01:00  WARN 7445 --- [BudgetManager] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-02-06T10:32:05.929+01:00  INFO 7445 --- [BudgetManager] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-02-06T10:32:05.933+01:00  INFO 7445 --- [BudgetManager] [main] c.p.B.BudgetManagerApplication           : Started BudgetManagerApplication in 2.56 seconds (process running for 2.706)
+2026-02-06T10:32:13.731+01:00  INFO 7445 --- [BudgetManager] [http-nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-02-06T10:32:13.732+01:00  INFO 7445 --- [BudgetManager] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-02-06T10:32:13.732+01:00  INFO 7445 --- [BudgetManager] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 0 ms
+2026-02-06T10:40:31.455+01:00  INFO 7445 --- [BudgetManager] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-02-06T10:40:31.460+01:00  INFO 7445 --- [BudgetManager] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-02-06T10:40:31.464+01:00  INFO 7445 --- [BudgetManager] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-02-06T10:40:31.466+01:00  INFO 7445 --- [BudgetManager] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-02-06T10:40:31.469+01:00  INFO 7445 --- [BudgetManager] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-02-06T10:40:32.929+01:00  INFO 7694 --- [BudgetManager] [main] c.p.B.BudgetManagerApplication           : Starting BudgetManagerApplication using Java 25.0.1 with PID 7694 (/Users/TomaszOrzel/ProjektyJava/FinanceManager/BudgetManager/target/classes started by TomaszOrzel in /Users/TomaszOrzel/ProjektyJava/FinanceManager/BudgetManager)
+2026-02-06T10:40:32.929+01:00  INFO 7694 --- [BudgetManager] [main] c.p.B.BudgetManagerApplication           : No active profile set, falling back to 1 default profile: "default"
+2026-02-06T10:40:33.212+01:00  INFO 7694 --- [BudgetManager] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-02-06T10:40:33.240+01:00  INFO 7694 --- [BudgetManager] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 23 ms. Found 7 JPA repository interfaces.
+2026-02-06T10:40:33.482+01:00  INFO 7694 --- [BudgetManager] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-02-06T10:40:33.488+01:00  INFO 7694 --- [BudgetManager] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-02-06T10:40:33.488+01:00  INFO 7694 --- [BudgetManager] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.48]
+2026-02-06T10:40:33.505+01:00  INFO 7694 --- [BudgetManager] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-02-06T10:40:33.506+01:00  INFO 7694 --- [BudgetManager] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 553 ms
+2026-02-06T10:40:33.550+01:00  INFO 7694 --- [BudgetManager] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-02-06T10:40:33.570+01:00  INFO 7694 --- [BudgetManager] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.33.Final
+2026-02-06T10:40:33.581+01:00  INFO 7694 --- [BudgetManager] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-02-06T10:40:33.685+01:00  INFO 7694 --- [BudgetManager] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-02-06T10:40:33.696+01:00  INFO 7694 --- [BudgetManager] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-02-06T10:40:33.842+01:00  INFO 7694 --- [BudgetManager] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@bcfe29c
+2026-02-06T10:40:33.843+01:00  INFO 7694 --- [BudgetManager] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-02-06T10:40:33.863+01:00  WARN 7694 --- [BudgetManager] [main] org.hibernate.orm.deprecation            : HHH90000025: MySQL8Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-02-06T10:40:33.864+01:00  WARN 7694 --- [BudgetManager] [main] org.hibernate.orm.deprecation            : HHH90000026: MySQL8Dialect has been deprecated; use org.hibernate.dialect.MySQLDialect instead
+2026-02-06T10:40:33.870+01:00  INFO 7694 --- [BudgetManager] [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 8.0
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-02-06T10:40:34.269+01:00  INFO 7694 --- [BudgetManager] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-02-06T10:40:34.342+01:00  INFO 7694 --- [BudgetManager] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-02-06T10:40:34.499+01:00  INFO 7694 --- [BudgetManager] [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2026-02-06T10:40:34.529+01:00  INFO 7694 --- [BudgetManager] [main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-02-06T10:40:35.167+01:00  WARN 7694 --- [BudgetManager] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-02-06T10:40:35.351+01:00  INFO 7694 --- [BudgetManager] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-02-06T10:40:35.355+01:00  INFO 7694 --- [BudgetManager] [main] c.p.B.BudgetManagerApplication           : Started BudgetManagerApplication in 2.624 seconds (process running for 2.773)
+2026-02-06T10:40:39.135+01:00  INFO 7694 --- [BudgetManager] [http-nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-02-06T10:40:39.136+01:00  INFO 7694 --- [BudgetManager] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-02-06T10:40:39.137+01:00  INFO 7694 --- [BudgetManager] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-02-06T10:44:05.854+01:00  INFO 7694 --- [BudgetManager] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-02-06T10:44:05.860+01:00  INFO 7694 --- [BudgetManager] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-02-06T10:44:05.864+01:00  INFO 7694 --- [BudgetManager] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-02-06T10:44:05.866+01:00  INFO 7694 --- [BudgetManager] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-02-06T10:44:05.869+01:00  INFO 7694 --- [BudgetManager] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-02-06T10:44:07.391+01:00  INFO 7761 --- [BudgetManager] [main] c.p.B.BudgetManagerApplication           : Starting BudgetManagerApplication using Java 25.0.1 with PID 7761 (/Users/TomaszOrzel/ProjektyJava/FinanceManager/BudgetManager/target/classes started by TomaszOrzel in /Users/TomaszOrzel/ProjektyJava/FinanceManager/BudgetManager)
+2026-02-06T10:44:07.392+01:00  INFO 7761 --- [BudgetManager] [main] c.p.B.BudgetManagerApplication           : No active profile set, falling back to 1 default profile: "default"
+2026-02-06T10:44:07.707+01:00  INFO 7761 --- [BudgetManager] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-02-06T10:44:07.732+01:00  INFO 7761 --- [BudgetManager] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 22 ms. Found 7 JPA repository interfaces.
+2026-02-06T10:44:07.962+01:00  INFO 7761 --- [BudgetManager] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-02-06T10:44:07.968+01:00  INFO 7761 --- [BudgetManager] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-02-06T10:44:07.968+01:00  INFO 7761 --- [BudgetManager] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.48]
+2026-02-06T10:44:07.985+01:00  INFO 7761 --- [BudgetManager] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-02-06T10:44:07.985+01:00  INFO 7761 --- [BudgetManager] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 566 ms
+2026-02-06T10:44:08.038+01:00  INFO 7761 --- [BudgetManager] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-02-06T10:44:08.059+01:00  INFO 7761 --- [BudgetManager] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.33.Final
+2026-02-06T10:44:08.069+01:00  INFO 7761 --- [BudgetManager] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-02-06T10:44:08.178+01:00  INFO 7761 --- [BudgetManager] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-02-06T10:44:08.189+01:00  INFO 7761 --- [BudgetManager] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-02-06T10:44:08.334+01:00  INFO 7761 --- [BudgetManager] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@12166229
+2026-02-06T10:44:08.335+01:00  INFO 7761 --- [BudgetManager] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-02-06T10:44:08.356+01:00  WARN 7761 --- [BudgetManager] [main] org.hibernate.orm.deprecation            : HHH90000025: MySQL8Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-02-06T10:44:08.356+01:00  WARN 7761 --- [BudgetManager] [main] org.hibernate.orm.deprecation            : HHH90000026: MySQL8Dialect has been deprecated; use org.hibernate.dialect.MySQLDialect instead
+2026-02-06T10:44:08.362+01:00  INFO 7761 --- [BudgetManager] [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 8.0
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-02-06T10:44:08.773+01:00  INFO 7761 --- [BudgetManager] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-02-06T10:44:08.845+01:00  INFO 7761 --- [BudgetManager] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-02-06T10:44:08.968+01:00  WARN 7761 --- [BudgetManager] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-02-06T10:44:09.039+01:00  INFO 7761 --- [BudgetManager] [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2026-02-06T10:44:09.070+01:00  INFO 7761 --- [BudgetManager] [main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-02-06T10:44:09.884+01:00  INFO 7761 --- [BudgetManager] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-02-06T10:44:09.888+01:00  INFO 7761 --- [BudgetManager] [main] c.p.B.BudgetManagerApplication           : Started BudgetManagerApplication in 2.673 seconds (process running for 2.824)
+2026-02-06T10:44:14.961+01:00  INFO 7761 --- [BudgetManager] [http-nio-8080-exec-2] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-02-06T10:44:14.961+01:00  INFO 7761 --- [BudgetManager] [http-nio-8080-exec-2] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-02-06T10:44:14.962+01:00  INFO 7761 --- [BudgetManager] [http-nio-8080-exec-2] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-02-06T10:49:09.475+01:00  INFO 7761 --- [BudgetManager] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-02-06T10:49:09.479+01:00  INFO 7761 --- [BudgetManager] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-02-06T10:49:09.484+01:00  INFO 7761 --- [BudgetManager] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-02-06T10:49:09.488+01:00  INFO 7761 --- [BudgetManager] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-02-06T10:49:09.491+01:00  INFO 7761 --- [BudgetManager] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-02-06T10:49:11.155+01:00  INFO 7870 --- [BudgetManager] [main] c.p.B.BudgetManagerApplication           : Starting BudgetManagerApplication using Java 25.0.1 with PID 7870 (/Users/TomaszOrzel/ProjektyJava/FinanceManager/BudgetManager/target/classes started by TomaszOrzel in /Users/TomaszOrzel/ProjektyJava/FinanceManager/BudgetManager)
+2026-02-06T10:49:11.155+01:00  INFO 7870 --- [BudgetManager] [main] c.p.B.BudgetManagerApplication           : No active profile set, falling back to 1 default profile: "default"
+2026-02-06T10:49:11.430+01:00  INFO 7870 --- [BudgetManager] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-02-06T10:49:11.456+01:00  INFO 7870 --- [BudgetManager] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 22 ms. Found 7 JPA repository interfaces.
+2026-02-06T10:49:11.689+01:00  INFO 7870 --- [BudgetManager] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-02-06T10:49:11.695+01:00  INFO 7870 --- [BudgetManager] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-02-06T10:49:11.695+01:00  INFO 7870 --- [BudgetManager] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.48]
+2026-02-06T10:49:11.712+01:00  INFO 7870 --- [BudgetManager] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-02-06T10:49:11.712+01:00  INFO 7870 --- [BudgetManager] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 534 ms
+2026-02-06T10:49:11.757+01:00  INFO 7870 --- [BudgetManager] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-02-06T10:49:11.776+01:00  INFO 7870 --- [BudgetManager] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.33.Final
+2026-02-06T10:49:11.786+01:00  INFO 7870 --- [BudgetManager] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-02-06T10:49:11.890+01:00  INFO 7870 --- [BudgetManager] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-02-06T10:49:11.901+01:00  INFO 7870 --- [BudgetManager] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-02-06T10:49:12.052+01:00  INFO 7870 --- [BudgetManager] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@59f76e56
+2026-02-06T10:49:12.052+01:00  INFO 7870 --- [BudgetManager] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-02-06T10:49:12.072+01:00  WARN 7870 --- [BudgetManager] [main] org.hibernate.orm.deprecation            : HHH90000025: MySQL8Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-02-06T10:49:12.072+01:00  WARN 7870 --- [BudgetManager] [main] org.hibernate.orm.deprecation            : HHH90000026: MySQL8Dialect has been deprecated; use org.hibernate.dialect.MySQLDialect instead
+2026-02-06T10:49:12.078+01:00  INFO 7870 --- [BudgetManager] [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 8.0
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-02-06T10:49:12.479+01:00  INFO 7870 --- [BudgetManager] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-02-06T10:49:12.545+01:00  INFO 7870 --- [BudgetManager] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-02-06T10:49:12.676+01:00  WARN 7870 --- [BudgetManager] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-02-06T10:49:12.751+01:00  INFO 7870 --- [BudgetManager] [main] eAuthenticationProviderManagerConfigurer : Global AuthenticationManager configured with AuthenticationProvider bean with name authenticationProvider
+2026-02-06T10:49:12.751+01:00  WARN 7870 --- [BudgetManager] [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with an AuthenticationProvider bean. UserDetailsService beans will not be used by Spring Security for automatically configuring username/password login. Consider removing the AuthenticationProvider bean. Alternatively, consider using the UserDetailsService in a manually instantiated DaoAuthenticationProvider. If the current configuration is intentional, to turn off this warning, increase the logging level of 'org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer' to ERROR
+2026-02-06T10:49:12.780+01:00  INFO 7870 --- [BudgetManager] [main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-02-06T10:49:13.562+01:00  INFO 7870 --- [BudgetManager] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-02-06T10:49:13.567+01:00  INFO 7870 --- [BudgetManager] [main] c.p.B.BudgetManagerApplication           : Started BudgetManagerApplication in 2.603 seconds (process running for 2.759)
+2026-02-06T10:49:17.306+01:00  INFO 7870 --- [BudgetManager] [http-nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-02-06T10:49:17.306+01:00  INFO 7870 --- [BudgetManager] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-02-06T10:49:17.307+01:00  INFO 7870 --- [BudgetManager] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-02-06T10:51:11.513+01:00  WARN 7870 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1m29s347ms).
+2026-02-06T11:03:32.466+01:00  WARN 7870 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=12m20s956ms).
+2026-02-06T11:05:28.980+01:00  WARN 7870 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1m22s116ms).
+2026-02-06T11:07:20.493+01:00  WARN 7870 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1m51s513ms).
+2026-02-06T11:14:12.428+01:00  WARN 7870 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=6m51s935ms).
+2026-02-06T11:18:52.521+01:00  WARN 7870 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=4m40s93ms).
+2026-02-06T11:20:46.271+01:00  WARN 7870 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1m53s749ms).
+2026-02-06T11:40:56.573+01:00  WARN 7870 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=20m10s303ms).
+2026-02-06T11:50:40.536+01:00  WARN 7870 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=9m43s963ms).
+2026-02-06T11:53:22.806+01:00  WARN 7870 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=2m42s270ms).
+2026-02-06T11:55:49.334+01:00  WARN 7870 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=2m26s528ms).
+2026-02-06T12:11:49.415+01:00  WARN 7870 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=16m81ms).
+2026-02-06T12:18:19.687+01:00  WARN 7870 --- [BudgetManager] [HikariPool-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=6m30s272ms).

@@ -1,6 +1,7 @@
 package com.personalfinance.BudgetManager.Services;
 
 import com.personalfinance.BudgetManager.DTO.CreateCategoryRequest;
+import com.personalfinance.BudgetManager.Exception.CategoryException;
 import com.personalfinance.BudgetManager.Model.Category;
 import com.personalfinance.BudgetManager.Model.CategoryType;
 import com.personalfinance.BudgetManager.Repositories.CategoryRepository;
@@ -37,6 +38,12 @@ public class CategoryService {
 
     public Optional<Category> getCategoryById(Long id){
         return categoryRepository.findById(id);
+    }
+
+    public void deleteCategoryById(Long id){
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new CategoryException(id));
+        categoryRepository.delete(category);
     }
 
 }

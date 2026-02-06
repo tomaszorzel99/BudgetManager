@@ -2,6 +2,7 @@ package com.personalfinance.BudgetManager.Mapper;
 
 import com.personalfinance.BudgetManager.DTO.AccountDTO;
 import com.personalfinance.BudgetManager.Model.Account;
+import com.personalfinance.BudgetManager.Model.User;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -15,8 +16,10 @@ public class AccountMapper {
         accountDTO.setAccountNumber(account.getAccountNumber());
         accountDTO.setCurrency(account.getCurrency());
         accountDTO.setBalance(account.getBalance());
-        accountDTO.setCreateDate(account.getCreateDate());
-        accountDTO.setUserName(account.getUser().getName());
+        accountDTO.setUserName(String.valueOf(account.getGroup().getUsers().stream().map(User::getName).toList()));
+        accountDTO.setGroupName(account.getGroup().getName());
+        accountDTO.setCreatedAt(account.getCreatedAt());
+        accountDTO.setUpdatedAt(account.getUpdatedAt());
         return accountDTO;
     }
 

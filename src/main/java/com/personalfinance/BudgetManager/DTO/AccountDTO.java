@@ -13,6 +13,8 @@ public class AccountDTO {
     private String accountNumber;
     private String currency;
     private BigDecimal balance;
-    private LocalDateTime createDate;
     private String userName;
+    private String groupName;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

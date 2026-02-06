@@ -1,23 +1,22 @@
 package com.personalfinance.BudgetManager.Model;
 
+import com.personalfinance.BudgetManager.Audit.AuditableEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jdk.jfr.Timestamp;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
 @Table(name = "users")
-public class User {
+public class User extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,11 +33,11 @@ public class User {
     @NotBlank(message = "Password cannot be blank")
     private String password;
 
-    @Column(name = "Created_date", updatable = false, nullable = false)
-    private LocalDateTime createData;
+    @Column(nullable = false)
+    private boolean enabled = true;
 
-    @PrePersist
-    public void prePersist () {
-        this.createData = LocalDateTime.now();
-    }
+    @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(name = "user_user_group", joinColumns = @JoinColumn(name = "user_id"),
+    inverseJoinColumns = @JoinColumn(name = "group_id"))
+    private Set<UserGroup> userGroups = new HashSet<>();
 }

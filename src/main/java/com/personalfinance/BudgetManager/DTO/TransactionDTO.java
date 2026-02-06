@@ -13,7 +13,7 @@ public class TransactionDTO {
     private BigDecimal amount;
     private CategoryType type;
     private String description;
-    private String notes;
+    private LocalDate transactionDate;
     private LocalDateTime createdDate;
     private Long accountId;
     private String userName;

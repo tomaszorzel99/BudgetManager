@@ -1,8 +1,8 @@
 package com.personalfinance.BudgetManager.Model;
 
+import com.personalfinance.BudgetManager.Audit.AuditableEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-public class Transaction {
+public class Transaction extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -37,8 +37,6 @@ public class Transaction {
     @Column(name = "transaction_date", nullable = false)
     private LocalDate transactionDate;
 
-    private String notes;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -55,12 +53,4 @@ public class Transaction {
     @JoinColumn(name = "subcategory_id", nullable = false)
     private Subcategory subcategory;
 
-    @Column(name = "created_date")
-    private LocalDateTime createdDate;
-
-    @PrePersist
-    public void prePersist() {
-        this.createdDate = LocalDateTime.now();
-        this.transactionDate = LocalDate.now();
-    }
 }

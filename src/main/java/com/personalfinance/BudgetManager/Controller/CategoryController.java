@@ -35,4 +35,10 @@ public class CategoryController {
         List<Category> allCategories = categoryService.getAllCategories();
         return ResponseEntity.ok().body(categoryMapper.convertToListDTO(allCategories));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteCategory(@PathVariable Long id){
+        categoryService.deleteCategoryById(id);
+        return ResponseEntity.noContent().build();
+    }
 }

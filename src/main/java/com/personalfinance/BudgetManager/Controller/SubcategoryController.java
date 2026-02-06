@@ -35,4 +35,10 @@ public class SubcategoryController {
         List<Subcategory> allSubcateries = subcategoryService.getAllSubcateries();
         return ResponseEntity.ok().body(subcategoryMapper.convertToListDTO(allSubcateries));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteSubcategory(@PathVariable Long id){
+        subcategoryService.deleteSubcategoriesById(id);
+        return ResponseEntity.noContent().build();
+    }
 }

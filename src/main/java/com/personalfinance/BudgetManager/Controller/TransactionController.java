@@ -3,6 +3,7 @@ package com.personalfinance.BudgetManager.Controller;
 import com.personalfinance.BudgetManager.DTO.CreateTransactionRequest;
 import com.personalfinance.BudgetManager.DTO.TransactionDTO;
 import com.personalfinance.BudgetManager.Mapper.TransactionMapper;
+import com.personalfinance.BudgetManager.Model.CategoryType;
 import com.personalfinance.BudgetManager.Model.Transaction;
 import com.personalfinance.BudgetManager.Services.TransactionService;
 import jakarta.validation.Valid;
@@ -10,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -31,8 +33,20 @@ public class TransactionController {
     }
 
     @GetMapping
-    public ResponseEntity<List<TransactionDTO>> getTransactions(){
-        List<Transaction> allTransactions = transactionService.getAllTransactions();
-        return ResponseEntity.ok(transactionMapper.convertToListDTO(allTransactions));
+    public ResponseEntity<List<TransactionDTO>> getTransactions(
+            @RequestParam(required = false) String userEmail,
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) CategoryType type,
+            @RequestParam(required = false) Long categoryId){
+
+        List<Transaction> transactions = transactionService.getTransactions(userEmail, month, year, type, categoryId);
+        return ResponseEntity.ok(transactionMapper.convertToListDTO(transactions));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteTransaction(@PathVariable Long id){
+        transactionService.deleteTransactionById(id);
+        return ResponseEntity.noContent().build();
     }
 }

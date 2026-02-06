@@ -1,8 +1,9 @@
 package com.personalfinance.BudgetManager.Mapper;
 
-import com.personalfinance.BudgetManager.DTO.TransactionDTO;
 import com.personalfinance.BudgetManager.DTO.UserDTO;
+import com.personalfinance.BudgetManager.DTO.UserGroupDTO;
 import com.personalfinance.BudgetManager.Model.User;
+import com.personalfinance.BudgetManager.Model.UserGroup;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -14,13 +15,22 @@ public class UserMapper {
         userDTO.setId(user.getId());
         userDTO.setName(user.getName());
         userDTO.setEmail(user.getEmail());
-        userDTO.setCreatedDate(user.getCreateData());
+        userDTO.setGroups(user.getUserGroups().stream().map(this::mapGroup).toList());
+        userDTO.setCreatedAt(user.getCreatedAt());
+        userDTO.setUpdatedAt(user.getUpdatedAt());
         return userDTO;
     }
 
-    public List<UserDTO> convertToListDTO(List<User> users){
-        return users.stream()
-                .map(this::convertToDTO)
-                .toList();
+    private UserGroupDTO mapGroup(UserGroup group) {
+        UserGroupDTO userGroupDTO = new UserGroupDTO();
+        userGroupDTO.setId(group.getId());
+        userGroupDTO.setName(group.getName());
+        return userGroupDTO;
     }
+
+//    public List<UserDTO> convertToListDTO(List<User> users){
+//        return users.stream()
+//                .map(this::convertToDTO)
+//                .toList();
+//    } DO USUNIĘCIA
 }
