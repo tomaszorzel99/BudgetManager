@@ -8,6 +8,7 @@ import com.personalfinance.BudgetManager.Model.UserGroup;
 import com.personalfinance.BudgetManager.Services.InvitationService;
 import com.personalfinance.BudgetManager.Services.UserGroupService;
 import com.personalfinance.BudgetManager.Services.UserService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -28,7 +29,7 @@ public class InvitationController {
     }
 
     @PostMapping("/invite")
-    public ResponseEntity<?> invite(@RequestBody InvitationRequest invitationRequest, @AuthenticationPrincipal UserDetails userDetails){
+    public ResponseEntity<?> invite(@Valid @RequestBody InvitationRequest invitationRequest, @AuthenticationPrincipal UserDetails userDetails){
         User inviter = userService.getUserByEmail(userDetails.getUsername());
         UserGroup group = userGroupService.getById(invitationRequest.getGroupId());
         String token = invitationService.inviteUserToGroup(inviter, group, invitationRequest.getEmail());
@@ -37,7 +38,7 @@ public class InvitationController {
     }
 
     @PostMapping("/accept")
-    public ResponseEntity<?> accept(@RequestBody InvitationTokenRequest invitationTokenRequest, @AuthenticationPrincipal UserDetails userDetails){
+    public ResponseEntity<?> accept(@Valid @RequestBody InvitationTokenRequest invitationTokenRequest, @AuthenticationPrincipal UserDetails userDetails){
         User user = userService.getUserByEmail(userDetails.getUsername());
         invitationService.acceptInvitation(invitationTokenRequest.getToken(), user);
         return ResponseEntity.ok().build();

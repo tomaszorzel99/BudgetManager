@@ -26,10 +26,10 @@ public class AuthService {
     }
 
     @Transactional
-    public void register(RegisterRequest request){
+    public void register(RegisterRequest request) {
         log.info("Attempting to register new user with email: {}", request.getEmail());
 
-        if(userRepository.existsByEmail(request.getEmail())) {
+        if (userRepository.existsByEmail(request.getEmail())) {
             log.warn("Registration failed: Email {} is already taken", request.getEmail());
             throw new EmailException(request.getEmail());
         }
@@ -39,12 +39,6 @@ public class AuthService {
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setEnabled(true);
-
-//        UserGroup group = new UserGroup();
-//        group.setName("Group of: " + user.getEmail());
-//
-//        user.getUserGroups().add(group);
-//        group.getUsers().add(user);
 
         userRepository.save(user);
         log.info("User {} successfully registered", request.getEmail());

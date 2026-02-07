@@ -31,9 +31,9 @@ public class SubcategoryController {
     }
 
     @GetMapping
-    public ResponseEntity<List<SubcategoryDTO>> getAllSybcategories(){
-        List<Subcategory> allSubcateries = subcategoryService.getAllSubcateries();
-        return ResponseEntity.ok().body(subcategoryMapper.convertToListDTO(allSubcateries));
+    public ResponseEntity<List<SubcategoryDTO>> getAllSubcategories(){
+        List<Subcategory> allSubcategories = subcategoryService.getAllSubcateries();
+        return ResponseEntity.ok().body(subcategoryMapper.convertToListDTO(allSubcategories));
     }
 
     @DeleteMapping("/{id}")

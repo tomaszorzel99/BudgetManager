@@ -2,6 +2,7 @@ package com.personalfinance.BudgetManager.Controller;
 
 import com.personalfinance.BudgetManager.DTO.CreateTransactionRequest;
 import com.personalfinance.BudgetManager.DTO.TransactionDTO;
+import com.personalfinance.BudgetManager.DTO.TransactionRequest;
 import com.personalfinance.BudgetManager.Mapper.TransactionMapper;
 import com.personalfinance.BudgetManager.Model.CategoryType;
 import com.personalfinance.BudgetManager.Model.Transaction;
@@ -9,6 +10,8 @@ import com.personalfinance.BudgetManager.Services.TransactionService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -33,12 +36,12 @@ public class TransactionController {
     }
 
     @GetMapping
-    public ResponseEntity<List<TransactionDTO>> getTransactions(
-            @RequestParam(required = false) String userEmail,
-            @RequestParam(required = false) Integer month,
-            @RequestParam(required = false) Integer year,
-            @RequestParam(required = false) CategoryType type,
-            @RequestParam(required = false) Long categoryId){
+    public ResponseEntity<List<TransactionDTO>> getTransactions(@RequestBody TransactionRequest request, @AuthenticationPrincipal UserDetails userDetails) {
+        String userEmail = userDetails.getUsername();
+        int month = request.getMonth();
+        int year = request.getYear();
+        CategoryType type = request.getCategory();
+        Long categoryId = request.getCategoryId();
 
         List<Transaction> transactions = transactionService.getTransactions(userEmail, month, year, type, categoryId);
         return ResponseEntity.ok(transactionMapper.convertToListDTO(transactions));

@@ -1,19 +1,33 @@
 package com.personalfinance.BudgetManager.Controller;
 
-public class GroupController {
-//
-//    @PostMapping("/groups")
-//    public ResponseEntity<GroupDTO> createGroup(@RequestBody CreateGroupRequest request, @AuthenticationPrincipal UserDetails userDetails) {
-//        User owner = userService.findByEmail(userDetails.getUsername());
-//        Group group = groupService.createGroup(request.getName(), owner);
-//        return ResponseEntity.status(HttpStatus.CREATED).body(groupMapper.toDTO(group));
-//    }
-//
-//    @PostMapping("/groups/{groupId}/users")
-//    public ResponseEntity<Void> addUserToGroup(@PathVariable Long groupId, @RequestParam String userEmail, @AuthenticationPrincipal UserDetails userDetails) {
-//        User requester = userService.findByEmail(userDetails.getUsername());
-//        groupService.addUserToGroup(groupId, userEmail, requester);
-//        return ResponseEntity.ok().build();
-//    }
+import com.personalfinance.BudgetManager.DTO.CreateGroupRequest;
+import com.personalfinance.BudgetManager.DTO.GroupDTO;
+import com.personalfinance.BudgetManager.Model.User;
+import com.personalfinance.BudgetManager.Model.UserGroup;
+import com.personalfinance.BudgetManager.Services.UserGroupService;
+import com.personalfinance.BudgetManager.Services.UserService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
+@RestController
+public class GroupController {
+
+    private final UserService userService;
+    private final UserGroupService userGroupService;
+
+    public GroupController(UserService userService, UserGroupService userGroupService) {
+        this.userService = userService;
+        this.userGroupService = userGroupService;
+    }
+
+    @PostMapping("/groups")
+    public ResponseEntity<GroupDTO> createGroup(@RequestBody CreateGroupRequest request) {
+        userGroupService.createGroup(request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
 }

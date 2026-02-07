@@ -31,9 +31,7 @@ public class Account extends AuditableEntity {
     @NotBlank(message = "Currence cannot be blank")
     private String currency;
 
-    @Min(value = 0, message = "Balance cannot be negative")
     private BigDecimal balance;
-
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "group_id")

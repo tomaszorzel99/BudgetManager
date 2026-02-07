@@ -1,12 +1,14 @@
 package com.personalfinance.BudgetManager.Services;
 
 import com.personalfinance.BudgetManager.DTO.CreateAccountRequest;
+import com.personalfinance.BudgetManager.Exception.AccountException;
 import com.personalfinance.BudgetManager.Exception.UserException;
 import com.personalfinance.BudgetManager.Model.Account;
 import com.personalfinance.BudgetManager.Model.User;
 import com.personalfinance.BudgetManager.Model.UserGroup;
 import com.personalfinance.BudgetManager.Repositories.AccountRepository;
 import com.personalfinance.BudgetManager.Repositories.UserRepository;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,10 +20,12 @@ public class AccountService {
 
     private final AccountRepository accountRepository;
     private final UserRepository userRepository;
+    private final UserService userService;
 
-    public AccountService(AccountRepository accountRepository, UserRepository userRepository) {
+    public AccountService(AccountRepository accountRepository, UserRepository userRepository, UserService userService) {
         this.accountRepository = accountRepository;
         this.userRepository = userRepository;
+        this.userService = userService;
     }
 
     public Account createAccount(CreateAccountRequest request, String email) {
@@ -60,14 +64,17 @@ public class AccountService {
 //        return accountRepository.save(account);
 //    }
 
-//    public void deleteAccountById(Long id, String email) throws AccessDeniedException {
-//        Account account = accountRepository.findById(id)
-//                .orElseThrow(() -> new AccountException(id));
-//        if (!account.getUser().getEmail().equals(email)){
-//            throw new AccessDeniedException("You are not owner of this account");
-//        }
-//        accountRepository.delete(account);
-//    }
+    public void deleteAccountById(Long id) throws AccessDeniedException {
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new AccountException(id));
+        User currentUser = userService.getCurrentUser();
+
+        if (!account.getGroup().getUsers().contains(currentUser)) {
+            throw new AccessDeniedException("You are not owner of this account");
+        }
+
+        accountRepository.delete(account);
+    }
 
 //    public void updateExistingAccountWithPatch(Account existingAccount, UpdateAccountRequest request){
 //        if(request.getName() != null) existingAccount.setName(request.getName());

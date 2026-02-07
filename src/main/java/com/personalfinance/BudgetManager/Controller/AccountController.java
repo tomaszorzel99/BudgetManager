@@ -54,9 +54,9 @@ public class AccountController {
 //        return ResponseEntity.ok().body(accountMapper.convertToDTO(updatedAccount));
 //    }
 //
-//    @DeleteMapping("/{id}")
-//    public ResponseEntity<Void> deleteAccount(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) throws AccessDeniedException{
-//        accountService.deleteAccountById(id, userDetails.getUsername());
-//        return ResponseEntity.noContent().build();
-//    }
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteAccount(@Valid @PathVariable Long id) {
+        accountService.deleteAccountById(id);
+        return ResponseEntity.noContent().build();
+    }
 }
