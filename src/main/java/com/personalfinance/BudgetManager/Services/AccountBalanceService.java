@@ -37,4 +37,16 @@ public class AccountBalanceService {
         log.info("Transferred {} from account {} to account {}",
                 amount, fromAccountId, toAccountId);
     }
+
+    public void addIncome(Long accountId, BigDecimal amount) {
+        Account account = accountRepository.findByIdWithLock(accountId).orElseThrow(() -> new AccountException(accountId));
+        account.setBalance(account.getBalance().add(amount));
+        accountRepository.save(account);
+    }
+
+    public void addExpense(Long accountId, BigDecimal amount) {
+        Account account = accountRepository.findByIdWithLock(accountId).orElseThrow(() -> new AccountException(accountId));
+        account.setBalance(account.getBalance().subtract(amount));
+        accountRepository.save(account);
+    }
 }

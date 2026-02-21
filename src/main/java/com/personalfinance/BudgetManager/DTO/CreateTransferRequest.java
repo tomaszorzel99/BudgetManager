@@ -17,7 +17,7 @@ public class CreateTransferRequest {
     private Long toAccountId;
 
     @NotNull
-    @DecimalMin("0,01")
+    @DecimalMin("0.01")
     private BigDecimal amount;
 
     private String description;

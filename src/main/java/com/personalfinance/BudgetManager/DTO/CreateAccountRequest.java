@@ -16,6 +16,9 @@ public class CreateAccountRequest {
     private String name;
     private String accountNumber;
 
+    @NotNull
+    private Long groupId;
+
     @NotBlank(message = "Currence cannot be blank")
     private String currency;
 

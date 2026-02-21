@@ -96,6 +96,7 @@ public class TransferService {
         return transfer;
     }
 
+    @Transactional
     public void deleteTransfer(Long transferId, String userEmail) {
 
         Transfer transfer = getTransferById(transferId, userEmail);

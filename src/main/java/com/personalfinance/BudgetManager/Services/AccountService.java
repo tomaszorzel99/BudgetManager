@@ -35,6 +35,7 @@ public class AccountService {
                 .orElseThrow(() -> new UserException(email));
 
         UserGroup group = user.getUserGroups().stream()
+                .filter(u -> u.getId().equals(request.getGroupId()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("User has no group"));
 

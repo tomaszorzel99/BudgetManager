@@ -19,18 +19,20 @@ public class TransactionService {
     private final CategoryRepository categoryRepository;
     private final SubcategoryRepository subcategoryRepository;
     private final AccountRepository accountRepository;
+    private final AccountBalanceService accountBalanceService;
 
-    public TransactionService(TransactionRepository transactionRepository, UserRepository userRepository, CategoryRepository categoryRepository, SubcategoryRepository subcategoryRepository, AccountRepository accountRepository) {
+    public TransactionService(TransactionRepository transactionRepository, UserRepository userRepository, CategoryRepository categoryRepository, SubcategoryRepository subcategoryRepository, AccountRepository accountRepository, AccountBalanceService accountBalanceService) {
         this.transactionRepository = transactionRepository;
         this.userRepository = userRepository;
         this.categoryRepository = categoryRepository;
         this.subcategoryRepository = subcategoryRepository;
         this.accountRepository = accountRepository;
+        this.accountBalanceService = accountBalanceService;
     }
 
     @Transactional
     public Transaction createTransaction(CreateTransactionRequest request, String userEmail) {
-        Account account = accountRepository.findById(request.getAccountId())
+        Account account = accountRepository.findByIdWithLock(request.getAccountId())
                 .orElseThrow(() -> new AccountException(request.getAccountId()));
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new CategoryException(request.getCategoryId()));
@@ -38,6 +40,12 @@ public class TransactionService {
                 .orElseThrow(() -> new SubcategoryException(request.getSubcategoryId()));
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new UserException(userEmail));
+
+        if (CategoryType.INCOME.equals(request.getType())) {
+            accountBalanceService.addIncome(request.getAccountId(), request.getAmount());
+        } else if (CategoryType.EXPENSE.equals(request.getType())) {
+            accountBalanceService.addExpense(request.getAccountId(), request.getAmount());
+        }
 
         Transaction transaction = new Transaction();
         transaction.setAmount(request.getAmount());
@@ -50,11 +58,7 @@ public class TransactionService {
         transaction.setAccount(account);
 
 
-        if (CategoryType.INCOME.equals(transaction.getType())) {
-            account.setBalance(account.getBalance().add(transaction.getAmount()));
-        } else if (CategoryType.EXPENSE.equals(transaction.getType())) {
-            account.setBalance(account.getBalance().subtract(transaction.getAmount()));
-        }
+
         return transactionRepository.save(transaction);
     }
 
@@ -100,9 +104,15 @@ public class TransactionService {
         Transaction transaction = transactionRepository.findByIdAndUserEmail(id, userEmail)
                 .orElseThrow(() -> new AccessDeniedException("No access to this transaction"));
 
+        Account account = transaction.getAccount();
 
-        System.out.println("JWT email: " + userEmail);
-        System.out.println("DB email: " + transaction.getUser().getEmail());
+        if (CategoryType.INCOME.equals(transaction.getType())) {
+            account.setBalance(account.getBalance().subtract(transaction.getAmount()));
+        } else if (CategoryType.EXPENSE.equals(transaction.getType())) {
+            account.setBalance(account.getBalance().add(transaction.getAmount()));
+        }
+
+        accountRepository.save(account);
         transactionRepository.delete(transaction);
     }
 }
