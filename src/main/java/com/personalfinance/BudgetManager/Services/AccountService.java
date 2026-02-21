@@ -8,6 +8,7 @@ import com.personalfinance.BudgetManager.Model.User;
 import com.personalfinance.BudgetManager.Model.UserGroup;
 import com.personalfinance.BudgetManager.Repositories.AccountRepository;
 import com.personalfinance.BudgetManager.Repositories.UserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +29,7 @@ public class AccountService {
         this.userService = userService;
     }
 
+    @Transactional
     public Account createAccount(CreateAccountRequest request, String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserException(email));
@@ -38,16 +40,12 @@ public class AccountService {
 
         Account account = new Account();
         account.setName(request.getName());
-        account.setAccountNumber(request.getAccountNumber());
         account.setCurrency(request.getCurrency());
         account.setBalance(request.getBalance());
         account.setGroup(group);
         return accountRepository.save(account);
     }
 
-//    public List<Account> getAccountsByUserEmail(String userEmail) {
-//        return accountRepository.findByUserEmail(userEmail);
-//    }
 
     public List<Account> getAccountsVisibleForUser(User user){
         Set<UserGroup> userGroups = user.getUserGroups();
@@ -64,6 +62,7 @@ public class AccountService {
 //        return accountRepository.save(account);
 //    }
 
+    @Transactional
     public void deleteAccountById(Long id) throws AccessDeniedException {
         Account account = accountRepository.findById(id)
                 .orElseThrow(() -> new AccountException(id));
@@ -72,7 +71,6 @@ public class AccountService {
         if (!account.getGroup().getUsers().contains(currentUser)) {
             throw new AccessDeniedException("You are not owner of this account");
         }
-
         accountRepository.delete(account);
     }
 

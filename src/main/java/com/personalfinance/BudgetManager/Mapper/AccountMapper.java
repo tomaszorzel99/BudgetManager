@@ -13,7 +13,6 @@ public class AccountMapper {
         AccountDTO accountDTO = new AccountDTO();
         accountDTO.setId(account.getId());
         accountDTO.setName(account.getName());
-        accountDTO.setAccountNumber(account.getAccountNumber());
         accountDTO.setCurrency(account.getCurrency());
         accountDTO.setBalance(account.getBalance());
         accountDTO.setUserName(String.valueOf(account.getGroup().getUsers().stream().map(User::getName).toList()));

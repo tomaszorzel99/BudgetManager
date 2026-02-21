@@ -1,5 +1,7 @@
 package com.personalfinance.BudgetManager.Controller;
 
+import com.personalfinance.BudgetManager.DTO.ComprehensiveReportDTO;
+import com.personalfinance.BudgetManager.DTO.CumulativeReportDTO;
 import com.personalfinance.BudgetManager.DTO.MonthlyReportDTO;
 import com.personalfinance.BudgetManager.DTO.MonthlyReportRequest;
 import com.personalfinance.BudgetManager.Services.ReportService;
@@ -23,11 +25,36 @@ public class ReportController {
     }
 
     @GetMapping("/monthly")
-    public ResponseEntity<MonthlyReportDTO> getMonthlyReport(@AuthenticationPrincipal UserDetails userDetails, @Valid @RequestBody MonthlyReportRequest request){
-        String userEmail = userDetails.getUsername();
-        int month = request.getMonth();
-        int year = request.getYear();
-        MonthlyReportDTO monthlyReport = reportService.getMonthlyReport(userEmail, month, year);
-        return ResponseEntity.ok(monthlyReport);
+    public ResponseEntity<MonthlyReportDTO> getMonthlyReport(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam int month,
+            @RequestParam int year) {
+
+        MonthlyReportDTO report = reportService.getMonthlyReport(userDetails.getUsername(), month, year);
+        return ResponseEntity.ok(report);
+    }
+
+    @GetMapping("/cumulative")
+    public ResponseEntity<CumulativeReportDTO> getCumulativeReport(
+            @RequestParam int month,
+            @RequestParam int year,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        CumulativeReportDTO report = reportService.getCumulativeReport(
+                userDetails.getUsername(), month, year);
+
+        return ResponseEntity.ok(report);
+    }
+
+    @GetMapping("/comprehensive")
+    public ResponseEntity<ComprehensiveReportDTO> getComprehensiveReport(
+            @RequestParam int month,
+            @RequestParam int year,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        ComprehensiveReportDTO report = reportService.getComprehensiveReport(
+                userDetails.getUsername(), month, year);
+
+        return ResponseEntity.ok(report);
     }
 }

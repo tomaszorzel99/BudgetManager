@@ -1,23 +1,21 @@
 package com.personalfinance.BudgetManager.DTO;
 
+import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
 
 @Data
+@Builder
 public class MonthlyReportDTO {
 
-    private String monthName;
+    private int month;
     private int year;
+
     private BigDecimal income;
     private BigDecimal expenses;
-    private BigDecimal balance;
-
-    public MonthlyReportDTO(String monthName, int year, BigDecimal income, BigDecimal expenses, BigDecimal balance) {
-        this.monthName = monthName;
-        this.year = year;
-        this.income = income;
-        this.expenses = expenses;
-        this.balance = balance;
-    }
+    private BigDecimal transfersToSavings;
+    private BigDecimal transfersFromSavings;
+    private BigDecimal netSavingsThisMonth;
+    private BigDecimal monthlyBalance;
 }

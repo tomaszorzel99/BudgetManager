@@ -7,7 +7,6 @@ import lombok.Data;
 @Data
 public class MonthlyReportRequest {
 
-
     private int month;
     private int year;
 }

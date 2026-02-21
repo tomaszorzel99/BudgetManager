@@ -25,13 +25,15 @@ public class Account extends AuditableEntity {
     @NotBlank(message = "Account name cannot be blank")
     private String name;
 
-    @Column(unique = true)
-    private String accountNumber;
+    @Enumerated(EnumType.STRING)
+    private AccountType accountType;
 
     @NotBlank(message = "Currence cannot be blank")
     private String currency;
 
     private BigDecimal balance;
+
+    private boolean availableForSpending = true;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "group_id")

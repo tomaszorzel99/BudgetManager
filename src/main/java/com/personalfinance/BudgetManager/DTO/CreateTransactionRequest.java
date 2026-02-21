@@ -17,18 +17,19 @@ public class CreateTransactionRequest {
     @NotNull(message = "Amount cannot be null")
     @DecimalMin(value = "0.01", message = "Amount must be greater than 0")
     private BigDecimal amount;
+
     @NotNull
     private CategoryType type;
 
     private LocalDate transactionDate;
     private String description;
+
     @NotNull(message = "Account id cannot be null")
     private Long accountId;
-    @Email
-    @NotBlank(message = "User id cannot be null")
-    private String userEmail;
+
     @NotNull(message = "Category id cannot be null")
     private Long categoryId;
+
     @NotNull(message = "Subcategory id cannot be null")
     private Long subcategoryId;
 }
