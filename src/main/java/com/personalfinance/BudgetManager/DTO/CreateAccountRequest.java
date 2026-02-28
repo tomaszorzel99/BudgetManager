@@ -1,7 +1,6 @@
 package com.personalfinance.BudgetManager.DTO;
 
-import com.personalfinance.BudgetManager.Repositories.AccountRepository;
-import jakarta.validation.constraints.Email;
+import com.personalfinance.BudgetManager.Model.AccountType;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -14,15 +13,16 @@ public class CreateAccountRequest {
 
     @NotBlank(message = "Account name cannot be blank")
     private String name;
-    private String accountNumber;
+    private AccountType accountType;
+    private boolean availableForSpending;
 
     @NotNull
     private Long groupId;
 
-    @NotBlank(message = "Currence cannot be blank")
+    @NotBlank(message = "Currency cannot be blank")
     private String currency;
 
     @Min(value = 0, message = "Balance cannot be negative")
-    private BigDecimal balance;
+    private BigDecimal initialBalance;
 
 }

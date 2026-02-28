@@ -8,6 +8,7 @@ import com.personalfinance.BudgetManager.Model.Account;
 import com.personalfinance.BudgetManager.Model.User;
 import com.personalfinance.BudgetManager.Services.AccountService;
 import com.personalfinance.BudgetManager.Services.UserService;
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -36,6 +37,7 @@ public class AccountController {
 
 
     @PostMapping
+    @Transactional
     public ResponseEntity<AccountDTO> createAccount(@Valid @RequestBody CreateAccountRequest request, @AuthenticationPrincipal UserDetails userDetails){
         Account account = accountService.createAccount(request, userDetails.getUsername());
         return ResponseEntity.status(HttpStatus.CREATED).body(accountMapper.convertToDTO(account));

@@ -16,6 +16,8 @@ public class AccountMapper {
         accountDTO.setCurrency(account.getCurrency());
         accountDTO.setBalance(account.getBalance());
         accountDTO.setUserName(String.valueOf(account.getGroup().getUsers().stream().map(User::getName).toList()));
+        accountDTO.setAccountType(account.getAccountType());
+        accountDTO.setAvailableForSpending(account.isAvailableForSpending());
         accountDTO.setGroupName(account.getGroup().getName());
         accountDTO.setCreatedAt(account.getCreatedAt());
         accountDTO.setUpdatedAt(account.getUpdatedAt());

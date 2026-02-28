@@ -2,5 +2,6 @@ package com.personalfinance.BudgetManager.Model;
 
 public enum CategoryType {
     INCOME,
-    EXPENSE
+    EXPENSE,
+    INITIAL_BALANCE
 }
