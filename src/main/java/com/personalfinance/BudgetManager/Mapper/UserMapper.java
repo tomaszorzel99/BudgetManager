@@ -27,10 +27,4 @@ public class UserMapper {
         userGroupDTO.setName(group.getName());
         return userGroupDTO;
     }
-
-//    public List<UserDTO> convertToListDTO(List<User> users){
-//        return users.stream()
-//                .map(this::convertToDTO)
-//                .toList();
-//    } DO USUNIĘCIA
 }
