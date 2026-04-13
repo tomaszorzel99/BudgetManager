@@ -1,0 +1,2 @@
+ALTER TABLE BudgetManager.categories
+    MODIFY COLUMN type enum('EXPENSE', 'INCOME', 'INITIAL_BALANCE') NOT NULL;

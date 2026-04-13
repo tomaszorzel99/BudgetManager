@@ -1,12 +1,14 @@
 package com.personalfinance.BudgetManager.Services;
 
 import com.personalfinance.BudgetManager.DTO.CreateSubcategoryRequest;
+import com.personalfinance.BudgetManager.DTO.UpdateSubcategoryRequst;
 import com.personalfinance.BudgetManager.Exception.CategoryException;
 import com.personalfinance.BudgetManager.Exception.SubcategoryException;
 import com.personalfinance.BudgetManager.Model.Category;
 import com.personalfinance.BudgetManager.Model.Subcategory;
 import com.personalfinance.BudgetManager.Repositories.CategoryRepository;
 import com.personalfinance.BudgetManager.Repositories.SubcategoryRepository;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -39,6 +41,22 @@ public class SubcategoryService {
 
     public List<Subcategory> getSubcategoriesByCategoryName(String categoryName) {
         return subcategoryRepository.findByCategoryName(categoryName);
+    }
+
+    public Subcategory updateSubcategory(Long id, UpdateSubcategoryRequst  requst, String email) throws AccessDeniedException {
+        Subcategory subcategory = subcategoryRepository.findById(id).orElseThrow(() -> new SubcategoryException(id));
+
+        updateSubcategoryWithPatch(subcategory, requst);
+        return subcategoryRepository.save(subcategory);
+    }
+
+    private void updateSubcategoryWithPatch(Subcategory existingSubcategory, UpdateSubcategoryRequst requst) {
+        if (!(requst.getName() == null)) {
+            existingSubcategory.setName(requst.getName());
+        }
+        if (!(requst.getDescription() == null)) {
+            existingSubcategory.setDescription(requst.getDescription());
+        }
     }
 
     public void deleteSubcategoriesById(Long id){

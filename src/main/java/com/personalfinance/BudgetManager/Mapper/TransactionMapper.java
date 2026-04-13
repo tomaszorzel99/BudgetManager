@@ -20,6 +20,7 @@ public class TransactionMapper {
         transactionDTO.setCategoryName(transaction.getCategory().getName());
         transactionDTO.setSubcategoryName(transaction.getSubcategory().getName());
         transactionDTO.setAccountId(transaction.getAccount().getId());
+        transactionDTO.setAccountName(transaction.getAccount().getName());
         return transactionDTO;
     }
 

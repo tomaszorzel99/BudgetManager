@@ -2,7 +2,6 @@ package com.personalfinance.BudgetManager.Repositories;
 
 import com.personalfinance.BudgetManager.Model.Account;
 import com.personalfinance.BudgetManager.Model.AccountType;
-import com.personalfinance.BudgetManager.Model.User;
 import com.personalfinance.BudgetManager.Model.UserGroup;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -19,7 +18,8 @@ import java.util.Set;
 @Repository
 public interface AccountRepository extends JpaRepository<Account, Long> {
 
-    List<Account> findAllByGroupIn(Set<UserGroup> groups);
+    @Query("SELECT a FROM Account a WHERE a.group IN :groups AND a.deletedAt IS NULL")
+    List<Account> findActiveByGroupIn(Set<UserGroup> groups);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT a FROM Account a WHERE a.id = :id")
@@ -40,7 +40,7 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
             "AND a.accountType = :accountType")
     BigDecimal getTotalBalanceByType(
             @Param("userId") Long userId,
-            @Param("type") AccountType type);
+            @Param("accountType") AccountType type);
 
     @Query("SELECT COALESCE(SUM(a.balance), 0) FROM Account a " +
             "JOIN a.group ug " +

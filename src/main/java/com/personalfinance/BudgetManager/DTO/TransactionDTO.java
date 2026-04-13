@@ -16,6 +16,7 @@ public class TransactionDTO {
     private LocalDate transactionDate;
     private LocalDateTime createdDate;
     private Long accountId;
+    private String accountName;
     private String userName;
     private String categoryName;
     private String subcategoryName;

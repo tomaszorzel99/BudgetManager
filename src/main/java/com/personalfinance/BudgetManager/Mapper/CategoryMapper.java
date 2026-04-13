@@ -11,7 +11,7 @@ public class CategoryMapper {
 
     private String mapHexToName(String hex){
         return switch (hex.toUpperCase()){
-            case "FF0000" -> "RED";
+            case "#FF0000" -> "RED";
             case "#00FF00" -> "GREEN";
             case "#0000FF" -> "BLUE";
             default -> "UNKNOWN";

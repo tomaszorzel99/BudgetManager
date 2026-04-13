@@ -34,6 +34,7 @@ public class Transaction extends AuditableEntity {
     private BigDecimal amount;
 
     @NotNull
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private CategoryType type;
 

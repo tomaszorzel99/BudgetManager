@@ -36,7 +36,7 @@ public class TransactionSpecification {
     }
 
     public static Specification<Transaction> inMonth(int month, int year) {
-        LocalDate start = LocalDate.of(month, year, 1);
+        LocalDate start = LocalDate.of(year, month, 1);
         LocalDate end = start.plusMonths(1).minusDays(1);
         return (root, query, cb) ->
             cb.between(root.get("transactionDate"), start, end);

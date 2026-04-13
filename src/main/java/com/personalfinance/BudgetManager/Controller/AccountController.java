@@ -61,4 +61,10 @@ public class AccountController {
         accountService.deleteAccountById(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PatchMapping("/id/archive")
+    public ResponseEntity<Void> archiveAccount(@PathVariable Long id) {
+        accountService.archiveAccount(id);
+        return ResponseEntity.noContent().build();
+    }
 }
