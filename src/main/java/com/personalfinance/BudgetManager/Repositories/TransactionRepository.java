@@ -16,6 +16,8 @@ import java.util.Optional;
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long>, JpaSpecificationExecutor<Transaction> {
     Optional<Transaction> findByIdAndUserEmail(Long id, String email);
+    Optional<Transaction> findByIdAndUserId(Long id, Long userId);
+    boolean existsByAccountIdAndTypeNot(Long id, CategoryType type);
 
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t " +
             "WHERE t.user.id = :userId " +

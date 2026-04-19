@@ -36,9 +36,9 @@ public class AccountService {
     }
 
     @Transactional
-    public Account createAccount(CreateAccountRequest request, String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UserException(email));
+    public Account createAccount(CreateAccountRequest request, Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserException(userId));
 
         UserGroup group = user.getUserGroups().stream()
                 .filter(u -> u.getId().equals(request.getGroupId()))
@@ -61,68 +61,65 @@ public class AccountService {
         return savedAccount;
     }
 
-    public List<Account> getAccountsVisibleForUser(User user){
-        Set<UserGroup> userGroups = user.getUserGroups();
-        return accountRepository.findActiveByGroupIn(userGroups);
+    public List<Account> getAccountsVisibleForUser(Long userId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new UserException(userId));
+        return accountRepository.findActiveByGroupIn(user.getUserGroups());
+    }
+
+    public List<Account> getArchivedAccount(){
+        User currentUser = userService.getCurrentUser();
+        return accountRepository.findArchivedByGroupIn(currentUser.getUserGroups());
     }
 
 
 
-    public Account updateAccount(Long id, UpdateAccountRequest request, String email) throws AccessDeniedException {
-        Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new AccountException(id));
-        if(!account.getGroup().getUsers().stream().map(User::getEmail).toList().contains(email)){
-            throw new AccessDeniedException("You are not owner of this account");
-        }
+    public Account updateAccount(Long id, UpdateAccountRequest request) throws AccessDeniedException {
+
+        User currentUser = userService.getCurrentUser();
+        Account account = accountRepository.findByIdAndGroupUsersId(id,  currentUser.getId())
+                .orElseThrow(() -> new AccessDeniedException("You are not owner of this account or account does not exist"));
         updateExistingAccountWithPatch(account, request);
         return accountRepository.save(account);
     }
 
     @Transactional
-    public void deleteAccountById(Long id) throws AccessDeniedException {
-        Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new AccountException(id));
-        User currentUser = userService.getCurrentUser();
+    public void deleteAccountById(Long id, Long userId) throws AccessDeniedException {
+        Account account = getOwnedAccount(id, userId);
 
-        if (!account.getGroup().getUsers().contains(currentUser)) {
-            throw new AccessDeniedException("You are not owner of this account");
+        boolean hasRealTransaction = transactionRepository.existsByAccountIdAndTypeNot(id, CategoryType.INITIAL_BALANCE);
+        if (hasRealTransaction) {
+            throw new IllegalStateException("Cannot delete account with transactions. Please archive the account instead.");
         }
-
-        if (account.getBalance().compareTo(BigDecimal.ZERO) != 0){
-            throw new IllegalStateException("Cannot delete account with non-zero balance. Current balance: " +
-                    account.getBalance());
-        }
-        accountRepository.delete(account);
+        account.setBalance(BigDecimal.ZERO);
+        account.setAvailableForSpending(false);
+        account.setDeletedAt(LocalDateTime.now());
     }
 
     @Transactional
-    public void archiveAccount(Long id) throws AccessDeniedException {
-        Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new AccountException(id));
-        User currentUser = userService.getCurrentUser();
+    public void archiveAccount(Long id, Long userId) throws AccessDeniedException {
+        Account account = getOwnedAccount(id, userId);
 
-        if(!account.getGroup().getUsers().contains(currentUser)) {
-            throw new AccessDeniedException("You are not owner of this account");
+        if (account.getDeletedAt() != null) {
+            throw new IllegalStateException("Account is already archived");
         }
 
-        if (account.getBalance().compareTo(BigDecimal.ZERO) != 0){
+                if (account.getBalance().compareTo(BigDecimal.ZERO) != 0){
             throw new IllegalStateException("Cannot delete account with non-zero balance. Current balance: " +
                     account.getBalance());
         }
 
+        account.setAvailableForSpending(false);
         account.setDeletedAt(LocalDateTime.now());
-        accountRepository.save(account);
-
     }
 
     public void updateExistingAccountWithPatch(Account existingAccount, UpdateAccountRequest request){
         if (request.getName() != null) existingAccount.setName(request.getName());
         if (request.getAccountType() != null) existingAccount.setAccountType(request.getAccountType());
         if (request.getCurrency() != null) existingAccount.setCurrency(request.getCurrency());
-        if (request.getBalance() != null) existingAccount.setBalance(request.getBalance());
-        if (request.getAvailableForSpending() !=null) {
-            existingAccount.setAvailableForSpending(request.getAvailableForSpending());
-        }
+//        if (request.getBalance() != null) existingAccount.setBalance(request.getBalance());
+//        if (request.getAvailableForSpending() !=null) {
+//            existingAccount.setAvailableForSpending(request.getAvailableForSpending());
+//        }
     }
 
     private void createInitialTransaction(Account account, BigDecimal amount) {
@@ -145,5 +142,10 @@ public class AccountService {
         transaction.setAccount(account);
         transaction.setUser(account.getGroup().getUsers().iterator().next());
         transactionRepository.save(transaction);
+    }
+
+    private Account getOwnedAccount(Long id, Long userId) throws AccessDeniedException {
+        return accountRepository.findByIdAndGroupUsersId(id, userId).
+                orElseThrow(() -> new AccountException("Account not found or access denied"));
     }
 }

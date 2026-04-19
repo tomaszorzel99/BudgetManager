@@ -25,19 +25,24 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     @Query("SELECT a FROM Account a WHERE a.id = :id")
     Optional<Account> findByIdWithLock(@Param("id") Long id);
 
+    Optional<Account> findByIdAndGroupUsersId(Long id, Long userId);
+
 
     @Query("SELECT COALESCE(SUM(a.balance), 0) FROM Account a " +
             "JOIN a.group ug " +
             "JOIN ug.users u " +
             "WHERE u.id = :userId " +
-            "AND a.availableForSpending = true")
+            "AND a.availableForSpending = true " +
+            "AND a.deletedAt IS NULL"
+            )
     BigDecimal getTotalAvailableBalance(@Param("userId") Long userId);
 
     @Query("SELECT COALESCE(SUM(a.balance), 0) FROM Account a " +
             "JOIN a.group ug " +
             "JOIN ug.users u " +
             "WHERE u.id = :userId " +
-            "AND a.accountType = :accountType")
+            "AND a.accountType = :accountType " +
+            "AND a.deletedAt IS NULL")
     BigDecimal getTotalBalanceByType(
             @Param("userId") Long userId,
             @Param("accountType") AccountType type);
@@ -45,6 +50,10 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     @Query("SELECT COALESCE(SUM(a.balance), 0) FROM Account a " +
             "JOIN a.group ug " +
             "JOIN ug.users u " +
-            "WHERE u.id = :userId")
+            "WHERE u.id = :userId " +
+            "AND a.deletedAt IS NULL")
     BigDecimal getTotalBalance(@Param("userId") Long userId);
+
+    @Query("SELECT a FROM Account a WHERE a.group IN :groups AND a.deletedAt IS NOT NULL")
+    List<Account> findArchivedByGroupIn(Set<UserGroup> groups);
 }

@@ -1,5 +1,6 @@
 package com.personalfinance.BudgetManager.Controller;
 
+import com.personalfinance.BudgetManager.Controller.DTO.CustomUserDetails;
 import com.personalfinance.BudgetManager.DTO.AccountDTO;
 import com.personalfinance.BudgetManager.DTO.CreateAccountRequest;
 import com.personalfinance.BudgetManager.DTO.UpdateAccountRequest;
@@ -38,33 +39,40 @@ public class AccountController {
 
     @PostMapping
     @Transactional
-    public ResponseEntity<AccountDTO> createAccount(@Valid @RequestBody CreateAccountRequest request, @AuthenticationPrincipal UserDetails userDetails){
-        Account account = accountService.createAccount(request, userDetails.getUsername());
+    public ResponseEntity<AccountDTO> createAccount(@Valid @RequestBody CreateAccountRequest request,
+                                                    @AuthenticationPrincipal CustomUserDetails userDetails){
+        Account account = accountService.createAccount(request, userDetails.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(accountMapper.convertToDTO(account));
     }
 
     @GetMapping
-    public ResponseEntity<List<AccountDTO>> getAccounts(@AuthenticationPrincipal UserDetails userDetails){
-        User user = userService.getUserByEmail(userDetails.getUsername());
-        List<Account> accounts = accountService.getAccountsVisibleForUser(user);
-        return ResponseEntity.ok(accountMapper.convertToListDTO(accounts));
+    public ResponseEntity<List<AccountDTO>> getAccounts(@AuthenticationPrincipal CustomUserDetails userDetails){
+        return ResponseEntity.ok(accountMapper.convertToListDTO(accountService.getAccountsVisibleForUser(userDetails.getId())));
     }
 
-//    @PatchMapping("/{id}")
-//    public ResponseEntity<AccountDTO> updateAccount(@PathVariable Long id, @Valid @RequestBody UpdateAccountRequest request, @AuthenticationPrincipal UserDetails userDetails) throws AccessDeniedException {
-//        Account updatedAccount = accountService.updateAccount(id, request, userDetails.getUsername());
-//        return ResponseEntity.ok().body(accountMapper.convertToDTO(updatedAccount));
-//    }
-//
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteAccount(@PathVariable Long id) {
-        accountService.deleteAccountById(id);
+    @GetMapping("/archived")
+    public ResponseEntity<List<AccountDTO>> getArchivedAccounts(){
+        return ResponseEntity.ok(accountMapper.convertToListDTO(accountService.getArchivedAccount()));
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<AccountDTO> updateAccount(@PathVariable Long id, @Valid @RequestBody UpdateAccountRequest request) {
+        Account updatedAccount = accountService.updateAccount(id, request);
+        return ResponseEntity.ok().body(accountMapper.convertToDTO(updatedAccount));
+    }
+
+    @PatchMapping("/{id}/archive")
+    public ResponseEntity<Void> archiveAccount(@PathVariable Long id,
+                                               @AuthenticationPrincipal CustomUserDetails userDetails) {
+        Long userId = userDetails.getId();
+        accountService.archiveAccount(id,  userId);
         return ResponseEntity.noContent().build();
     }
 
-    @PatchMapping("/id/archive")
-    public ResponseEntity<Void> archiveAccount(@PathVariable Long id) {
-        accountService.archiveAccount(id);
+    @DeleteMapping("/{id}")
+    public ResponseEntity<AccountDTO> deleteAccount(@PathVariable Long id,
+                                                    @AuthenticationPrincipal CustomUserDetails userDetails) {
+        accountService.deleteAccountById(id, userDetails.getId());
         return ResponseEntity.noContent().build();
     }
 }

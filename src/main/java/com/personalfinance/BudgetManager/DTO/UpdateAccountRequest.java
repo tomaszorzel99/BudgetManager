@@ -16,7 +16,7 @@ public class UpdateAccountRequest {
     private AccountType accountType;
     private String currency;
 
-    @Min(value = 0, message = "Balance cannot be negative")
-    private BigDecimal balance;
-    private Boolean availableForSpending;
+//    @Min(value = 0, message = "Balance cannot be negative")
+//    private BigDecimal balance;
+//    private Boolean availableForSpending;
 }

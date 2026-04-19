@@ -2,6 +2,7 @@ package com.personalfinance.BudgetManager.Controller;
 
 import com.personalfinance.BudgetManager.DTO.CreateTransactionRequest;
 import com.personalfinance.BudgetManager.DTO.TransactionDTO;
+import com.personalfinance.BudgetManager.DTO.UpdateTransactionRequest;
 import com.personalfinance.BudgetManager.Mapper.TransactionMapper;
 import com.personalfinance.BudgetManager.Model.CategoryType;
 import com.personalfinance.BudgetManager.Model.Transaction;
@@ -50,9 +51,15 @@ public class TransactionController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteTransaction(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
-        String userEmail = userDetails.getUsername();
-        transactionService.deleteTransactionById(id, userEmail);
+    public ResponseEntity<Void> deleteTransaction(@PathVariable Long id) {
+        transactionService.deleteTransactionById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<TransactionDTO> updateTransaction(@PathVariable Long id,
+                                                            @RequestBody UpdateTransactionRequest request) {
+        Transaction transaction = transactionService.updateTransaction(id, request);
+        return ResponseEntity.ok(transactionMapper.convertToDTO(transaction));
     }
 }
