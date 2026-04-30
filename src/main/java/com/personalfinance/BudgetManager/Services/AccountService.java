@@ -25,14 +25,16 @@ public class AccountService {
     private final TransactionRepository transactionRepository;
     private final CategoryRepository categoryRepository;
     private final SubcategoryRepository subcategoryRepository;
+    private final TransferRepository transferRepository;
 
-    public AccountService(AccountRepository accountRepository, UserRepository userRepository, UserService userService, TransactionRepository transactionRepository, CategoryRepository categoryRepository, SubcategoryRepository subcategoryRepository) {
+    public AccountService(AccountRepository accountRepository, UserRepository userRepository, UserService userService, TransactionRepository transactionRepository, CategoryRepository categoryRepository, SubcategoryRepository subcategoryRepository, TransferRepository transferRepository) {
         this.accountRepository = accountRepository;
         this.userRepository = userRepository;
         this.userService = userService;
         this.transactionRepository = transactionRepository;
         this.categoryRepository = categoryRepository;
         this.subcategoryRepository = subcategoryRepository;
+        this.transferRepository = transferRepository;
     }
 
     @Transactional
@@ -90,9 +92,9 @@ public class AccountService {
         if (hasRealTransaction) {
             throw new IllegalStateException("Cannot delete account with transactions. Please archive the account instead.");
         }
-        account.setBalance(BigDecimal.ZERO);
-        account.setAvailableForSpending(false);
-        account.setDeletedAt(LocalDateTime.now());
+        transferRepository.deleteByFromAccountIdOrToAccountId(id, id);
+        transactionRepository.deleteByAccountId(id);
+        accountRepository.delete(account);
     }
 
     @Transactional
@@ -116,10 +118,10 @@ public class AccountService {
         if (request.getName() != null) existingAccount.setName(request.getName());
         if (request.getAccountType() != null) existingAccount.setAccountType(request.getAccountType());
         if (request.getCurrency() != null) existingAccount.setCurrency(request.getCurrency());
-//        if (request.getBalance() != null) existingAccount.setBalance(request.getBalance());
-//        if (request.getAvailableForSpending() !=null) {
-//            existingAccount.setAvailableForSpending(request.getAvailableForSpending());
-//        }
+        if (request.getBalance() != null) existingAccount.setBalance(request.getBalance());
+        if (request.getAvailableForSpending() !=null) {
+            existingAccount.setAvailableForSpending(request.getAvailableForSpending());
+        }
     }
 
     private void createInitialTransaction(Account account, BigDecimal amount) {

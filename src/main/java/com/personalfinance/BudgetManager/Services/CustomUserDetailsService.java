@@ -1,5 +1,6 @@
 package com.personalfinance.BudgetManager.Services;
 
+import com.personalfinance.BudgetManager.Controller.DTO.CustomUserDetails;
 import com.personalfinance.BudgetManager.Model.User;
 import com.personalfinance.BudgetManager.Repositories.UserRepository;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -21,13 +22,10 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         User user = userRepository.findByEmail(email).orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        return new org.springframework.security.core.userdetails.User(
+        return new CustomUserDetails(
+                user.getId(),
                 user.getEmail(),
                 user.getPassword(),
-                user.isEnabled(),
-                true,
-                true,
-                true,
                 Collections.emptyList());
     }
 }

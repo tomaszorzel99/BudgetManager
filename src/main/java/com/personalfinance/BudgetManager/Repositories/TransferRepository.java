@@ -14,6 +14,8 @@ import java.util.List;
 @Repository
 public interface TransferRepository extends JpaRepository<Transfer, Long> {
 
+    void deleteByFromAccountIdOrToAccountId(Long fromId, Long toId);
+
     @Query("SELECT t FROM Transfer t WHERE t.user.id = :userId " +
             "AND (t.fromAccount.id = :accountId OR t.toAccount.id = :accountId) " +
             "AND t.transferDate BETWEEN :startDate AND :endDate")

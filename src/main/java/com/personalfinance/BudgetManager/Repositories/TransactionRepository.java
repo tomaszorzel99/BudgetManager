@@ -18,6 +18,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
     Optional<Transaction> findByIdAndUserEmail(Long id, String email);
     Optional<Transaction> findByIdAndUserId(Long id, Long userId);
     boolean existsByAccountIdAndTypeNot(Long id, CategoryType type);
+    void deleteByAccountId(Long id);
 
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t " +
             "WHERE t.user.id = :userId " +
