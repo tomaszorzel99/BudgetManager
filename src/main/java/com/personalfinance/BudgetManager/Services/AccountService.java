@@ -14,7 +14,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Set;
 
 @Service
 public class AccountService {
@@ -45,7 +44,7 @@ public class AccountService {
         UserGroup group = user.getUserGroups().stream()
                 .filter(u -> u.getId().equals(request.getGroupId()))
                 .findFirst()
-                .orElseThrow(() -> new IllegalStateException("User has no group"));
+                .orElseThrow(() -> new AccountException("User does not belong to the specified group"));
 
         Account account = new Account();
         account.setName(request.getName());
@@ -63,18 +62,20 @@ public class AccountService {
         return savedAccount;
     }
 
+    @Transactional
     public List<Account> getAccountsVisibleForUser(Long userId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new UserException(userId));
         return accountRepository.findActiveByGroupIn(user.getUserGroups());
     }
 
+    @Transactional
     public List<Account> getArchivedAccount(){
         User currentUser = userService.getCurrentUser();
         return accountRepository.findArchivedByGroupIn(currentUser.getUserGroups());
     }
 
 
-
+    @Transactional
     public Account updateAccount(Long id, UpdateAccountRequest request) throws AccessDeniedException {
 
         User currentUser = userService.getCurrentUser();

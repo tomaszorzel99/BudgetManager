@@ -45,15 +45,22 @@ public class TransactionService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new UserException(userEmail));
 
-        if (CategoryType.INCOME.equals(request.getType())) {
+        CategoryType effectiveType = category.getType() == CategoryType.INITIAL_BALANCE
+                || category.getType() == CategoryType.ADJUSTMENT
+                ? category.getType()
+                : request.getType();
+
+        if (CategoryType.INCOME.equals(effectiveType)) {
             accountBalanceService.addIncome(request.getAccountId(), request.getAmount());
-        } else if (CategoryType.EXPENSE.equals(request.getType())) {
+        } else if (CategoryType.EXPENSE.equals(effectiveType) && account.getAvailableForSpending()) {
             accountBalanceService.addExpense(request.getAccountId(), request.getAmount());
+        } else if (CategoryType.ADJUSTMENT.equals(effectiveType)) {
+            accountBalanceService.addIncome((request.getAccountId()), request.getAmount());
         }
 
         Transaction transaction = new Transaction();
         transaction.setAmount(request.getAmount());
-        transaction.setType(request.getType());
+        transaction.setType(effectiveType);
         transaction.setDescription(request.getDescription());
         transaction.setTransactionDate(request.getTransactionDate());
         transaction.setUser(user);
@@ -92,7 +99,7 @@ public class TransactionService {
             spec = spec.and(TransactionSpecification.hasCategory(categoryId));
         }
         if (month != null && year != null) {
-            spec = spec.and(TransactionSpecification.inMonth(year, month));
+            spec = spec.and(TransactionSpecification.inMonth(month, year));
         }
 
         return transactionRepository.findAll(spec);

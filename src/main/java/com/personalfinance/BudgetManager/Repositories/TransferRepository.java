@@ -81,4 +81,5 @@ public interface TransferRepository extends JpaRepository<Transfer, Long> {
             @Param("userId") Long userId,
             @Param("accountType") AccountType accountType,
             @Param("endDate") LocalDate endDate);
+
 }
