@@ -3,6 +3,7 @@ package com.personalfinance.BudgetManager.Controller;
 import com.personalfinance.BudgetManager.DTO.CreateGroupRequest;
 import com.personalfinance.BudgetManager.DTO.GroupDTO;
 import com.personalfinance.BudgetManager.Services.UserGroupService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,7 +22,7 @@ public class GroupController {
     }
 
     @PostMapping("/groups")
-    public ResponseEntity<GroupDTO> createGroup(@RequestBody CreateGroupRequest request) {
+    public ResponseEntity<GroupDTO> createGroup(@Valid @RequestBody CreateGroupRequest request) {
         userGroupService.createGroup(request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }

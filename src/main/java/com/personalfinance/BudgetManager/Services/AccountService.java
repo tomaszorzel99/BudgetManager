@@ -57,7 +57,7 @@ public class AccountService {
         Account savedAccount = accountRepository.save(account);
 
         if (request.getInitialBalance() != null && request.getInitialBalance().compareTo(BigDecimal.ZERO) > 0) {
-            createInitialTransaction(savedAccount, request.getInitialBalance());
+            createInitialTransaction(savedAccount, request.getInitialBalance(), user);
         }
         return savedAccount;
     }
@@ -93,7 +93,9 @@ public class AccountService {
         if (hasRealTransaction) {
             throw new IllegalStateException("Cannot delete account with transactions. Please archive the account instead.");
         }
-        transferRepository.deleteByFromAccountIdOrToAccountId(id, id);
+        if (transferRepository.existsByFromAccountIdOrToAccountId(id, id)) {
+            throw new IllegalStateException("Cannot delete account with transfers. Please archive the account instead.");
+        }
         transactionRepository.deleteByAccountId(id);
         accountRepository.delete(account);
     }
@@ -118,14 +120,25 @@ public class AccountService {
     public void updateExistingAccountWithPatch(Account existingAccount, UpdateAccountRequest request){
         if (request.getName() != null) existingAccount.setName(request.getName());
         if (request.getAccountType() != null) existingAccount.setAccountType(request.getAccountType());
-        if (request.getCurrency() != null) existingAccount.setCurrency(request.getCurrency());
-        if (request.getBalance() != null) existingAccount.setBalance(request.getBalance());
+        //if (request.getCurrency() != null) existingAccount.setCurrency(request.getCurrency());
+        if (request.getCurrency() != null
+                && !request.getCurrency().equalsIgnoreCase(existingAccount.getCurrency())) {
+            if (existingAccount.getBalance().signum() != 0
+                    || transactionRepository.existsByAccountId(existingAccount.getId())
+                    || transferRepository.existsByFromAccountIdOrToAccountId(existingAccount.getId(), existingAccount.getId())) {
+                throw new IllegalArgumentException("Cannot change the currency of an account with a balance or history. Create another account and transfer funds with an exchange rate.");
+            }
+            existingAccount.setCurrency(request.getCurrency().toUpperCase(java.util.Locale.ROOT));
+        }
+        if (request.getBalance() != null) {
+            throw new IllegalArgumentException("Balance cannot be edited directly; create an adjustment transaction");
+        }
         if (request.getAvailableForSpending() !=null) {
             existingAccount.setAvailableForSpending(request.getAvailableForSpending());
         }
     }
 
-    private void createInitialTransaction(Account account, BigDecimal amount) {
+    private void createInitialTransaction(Account account, BigDecimal amount, User creator) {
         Category category = categoryRepository.findAll().stream()
                 .filter(c -> "Initial Balance".equals(c.getName()))
                 .findFirst()
@@ -143,7 +156,7 @@ public class AccountService {
         transaction.setCategory(category);
         transaction.setSubcategory(subcategory);
         transaction.setAccount(account);
-        transaction.setUser(account.getGroup().getUsers().iterator().next());
+        transaction.setUser(creator);
         transactionRepository.save(transaction);
     }
 

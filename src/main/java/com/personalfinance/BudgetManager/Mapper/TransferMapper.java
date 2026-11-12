@@ -13,6 +13,10 @@ public class TransferMapper {
         TransferDTO transferDTO = new TransferDTO();
         transferDTO.setId(transfer.getId());
         transferDTO.setAmount(transfer.getAmount());
+        transferDTO.setReceivedAmount(transfer.getReceivedAmount());
+        transferDTO.setExchangeRate(transfer.getExchangeRate());
+        transferDTO.setFromCurrency(transfer.getFromAccount().getCurrency());
+        transferDTO.setToCurrency(transfer.getToAccount().getCurrency());
         transferDTO.setDescription(transfer.getDescription());
         transferDTO.setTransferDate(transfer.getTransferDate());
 

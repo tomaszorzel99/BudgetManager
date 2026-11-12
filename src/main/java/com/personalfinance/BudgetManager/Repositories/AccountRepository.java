@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -56,4 +57,9 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
 
     @Query("SELECT a FROM Account a WHERE a.group IN :groups AND a.deletedAt IS NOT NULL")
     List<Account> findArchivedByGroupIn(Set<UserGroup> groups);
+
+    @Query("SELECT DISTINCT a FROM Account a JOIN a.group g JOIN g.users u " +
+           "WHERE u.id = :userId AND a.createdAt < :before")
+    List<Account> findForHistoricalReport(@Param("userId") Long userId,
+                                          @Param("before")LocalDateTime before);
 }

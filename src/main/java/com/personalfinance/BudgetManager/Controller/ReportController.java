@@ -1,9 +1,6 @@
 package com.personalfinance.BudgetManager.Controller;
 
-import com.personalfinance.BudgetManager.DTO.ComprehensiveReportDTO;
-import com.personalfinance.BudgetManager.DTO.CumulativeReportDTO;
-import com.personalfinance.BudgetManager.DTO.MonthlyReportDTO;
-import com.personalfinance.BudgetManager.DTO.MonthlyReportRequest;
+import com.personalfinance.BudgetManager.DTO.*;
 import com.personalfinance.BudgetManager.Services.ReportService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -13,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/report")
@@ -56,5 +55,16 @@ public class ReportController {
                 userDetails.getUsername(), month, year);
 
         return ResponseEntity.ok(report);
+    }
+
+    @GetMapping("/balance-history")
+    public ResponseEntity<List<BalanceAtDateDTO>> getBalanceHistory(
+            @RequestParam int month,
+            @RequestParam int year,
+            @RequestParam(defaultValue = "12") int months,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        return ResponseEntity.ok(reportService.getBalanceHistory(
+                userDetails.getUsername(), month, year, months));
     }
 }

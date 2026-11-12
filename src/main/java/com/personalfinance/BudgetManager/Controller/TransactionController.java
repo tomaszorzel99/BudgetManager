@@ -58,7 +58,7 @@ public class TransactionController {
 
     @PatchMapping("/{id}")
     public ResponseEntity<TransactionDTO> updateTransaction(@PathVariable Long id,
-                                                            @RequestBody UpdateTransactionRequest request) {
+                                                            @Valid @RequestBody UpdateTransactionRequest request) {
         Transaction transaction = transactionService.updateTransaction(id, request);
         return ResponseEntity.ok(transactionMapper.convertToDTO(transaction));
     }

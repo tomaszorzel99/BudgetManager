@@ -2,7 +2,9 @@ package com.personalfinance.BudgetManager.Repositories;
 
 import com.personalfinance.BudgetManager.Model.AccountType;
 import com.personalfinance.BudgetManager.Model.Transfer;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -10,11 +12,17 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface TransferRepository extends JpaRepository<Transfer, Long> {
 
     void deleteByFromAccountIdOrToAccountId(Long fromId, Long toId);
+    boolean existsByFromAccountIdOrToAccountId(Long fromId, Long toId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT t FROM Transfer t WHERE t.id = :id")
+    Optional<Transfer> findByIdWithLock(@Param("id") Long id);
 
     @Query("SELECT t FROM Transfer t WHERE t.user.id = :userId " +
             "AND (t.fromAccount.id = :accountId OR t.toAccount.id = :accountId) " +
@@ -82,4 +90,25 @@ public interface TransferRepository extends JpaRepository<Transfer, Long> {
             @Param("accountType") AccountType accountType,
             @Param("endDate") LocalDate endDate);
 
+    @Query("SELECT t FROM Transfer t JOIN FETCH t.fromAccount f JOIN FETCH t.toAccount a " +
+            "WHERE (f.id IN :accountIds OR a.id IN :accountIds) " +
+            "AND t.transferDate <= :endDate")
+    List<Transfer> findForHistoricalReport(@Param("accountIds") List<Long> accountIds,
+                                           @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transfer t " +
+            "WHERE t.user.id = :userId AND t.toAccount.accountType = :accountType " +
+            "AND t.transferDate BETWEEN :startDate AND :endDate")
+    BigDecimal getTotalTransfersToTypeBetween(@Param("userId") Long userId,
+                                              @Param("accountType") AccountType accountType,
+                                              @Param("startDate") LocalDate startDate,
+                                              @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transfer t " +
+            "WHERE t.user.id = :userId AND t.fromAccount.accountType = :accountType " +
+            "AND t.transferDate BETWEEN :startDate AND :endDate")
+    BigDecimal getTotalTransfersFromTypeBetween(@Param("userId") Long userId,
+                                                @Param("accountType") AccountType accountType,
+                                                @Param("startDate") LocalDate startDate,
+                                                @Param("endDate") LocalDate endDate);
 }

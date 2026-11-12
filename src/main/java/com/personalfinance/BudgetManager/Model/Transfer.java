@@ -31,6 +31,12 @@ public class Transfer extends AuditableEntity {
     @Column(nullable = false)
     private BigDecimal amount;
 
+    @Column(name = "received_amount", nullable = false, precision = 38, scale = 2)
+    private BigDecimal receivedAmount;
+
+    @Column(name = "exchange_rate", nullable = false, precision = 30, scale = 12)
+    private BigDecimal exchangeRate;
+
     private String description;
 
     @Column(nullable = false)

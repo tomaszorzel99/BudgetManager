@@ -24,6 +24,11 @@ public class TransferDTO {
     private String toAccountName;
     private AccountType toAccountType;
 
+    private BigDecimal receivedAmount;
+    private BigDecimal exchangeRate;
+    private String fromCurrency;
+    private String toCurrency;
+
     private String userName;
 
     private LocalDateTime createdAt;

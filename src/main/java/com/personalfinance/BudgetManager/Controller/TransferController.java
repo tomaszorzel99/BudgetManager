@@ -52,6 +52,15 @@ public class TransferController {
         return ResponseEntity.ok(transferMapper.convertToDTO(transfer));
     }
 
+    @PatchMapping("/{id}")
+    public ResponseEntity<TransferDTO> updateTransfer(
+            @PathVariable Long id,
+            @Valid @RequestBody CreateTransferRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+                Transfer transfer = transferService.updateTransfer(id, request, userDetails.getUsername());
+                return ResponseEntity.ok(transferMapper.convertToDTO(transfer));
+            }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTransfer(
             @PathVariable Long id,

@@ -151,6 +151,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGenericException(Exception exception, HttpServletRequest request) {
+        log.error("Unhandled error for {}", request.getRequestURI(), exception);
         return buildError(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred. Please try again later.", request);
     }
 }

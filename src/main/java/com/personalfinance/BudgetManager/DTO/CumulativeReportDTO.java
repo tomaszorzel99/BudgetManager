@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Data
 @Builder
@@ -24,4 +25,10 @@ public class CumulativeReportDTO {
     private BigDecimal currentTotalBalance;
 
     private BigDecimal theoreticalNetIncome;
+
+    private LocalDate balanceDate;
+    private String balanceCurrency;
+    private BigDecimal totalBalanceAtDate;
+    private BigDecimal savingsBalanceAtDate;
+    private BigDecimal investmentBalanceAtDate;
 }

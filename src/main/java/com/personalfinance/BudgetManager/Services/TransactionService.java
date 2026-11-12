@@ -11,6 +11,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -21,48 +22,38 @@ public class TransactionService {
     private final CategoryRepository categoryRepository;
     private final SubcategoryRepository subcategoryRepository;
     private final AccountRepository accountRepository;
-    private final AccountBalanceService accountBalanceService;
     private final UserService userService;
 
-    public TransactionService(TransactionRepository transactionRepository, UserRepository userRepository, CategoryRepository categoryRepository, SubcategoryRepository subcategoryRepository, AccountRepository accountRepository, AccountBalanceService accountBalanceService, UserService userService) {
+    public TransactionService(TransactionRepository transactionRepository, UserRepository userRepository, CategoryRepository categoryRepository, SubcategoryRepository subcategoryRepository, AccountRepository accountRepository, UserService userService) {
         this.transactionRepository = transactionRepository;
         this.userRepository = userRepository;
         this.categoryRepository = categoryRepository;
         this.subcategoryRepository = subcategoryRepository;
         this.accountRepository = accountRepository;
-        this.accountBalanceService = accountBalanceService;
         this.userService = userService;
     }
 
     @Transactional
     public Transaction createTransaction(CreateTransactionRequest request, String userEmail) {
-        Account account = accountRepository.findByIdWithLock(request.getAccountId())
-                .orElseThrow(() -> new AccountException(request.getAccountId()));
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UserException(userEmail));
+        Account account = getAccessibleAccount(request.getAccountId(), user.getId());
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new CategoryException(request.getCategoryId()));
         Subcategory subcategory = subcategoryRepository.findById(request.getSubcategoryId())
                 .orElseThrow(() -> new SubcategoryException(request.getSubcategoryId()));
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new UserException(userEmail));
-
-        CategoryType effectiveType = category.getType() == CategoryType.INITIAL_BALANCE
-                || category.getType() == CategoryType.ADJUSTMENT
-                ? category.getType()
-                : request.getType();
-
-        if (CategoryType.INCOME.equals(effectiveType)) {
-            accountBalanceService.addIncome(request.getAccountId(), request.getAmount());
-        } else if (CategoryType.EXPENSE.equals(effectiveType) && account.getAvailableForSpending()) {
-            accountBalanceService.addExpense(request.getAccountId(), request.getAmount());
-        } else if (CategoryType.ADJUSTMENT.equals(effectiveType)) {
-            accountBalanceService.addIncome((request.getAccountId()), request.getAmount());
+        validateCategory(category, subcategory, request.getType());
+        if (request.getType() == CategoryType.INITIAL_BALANCE) {
+            throw new IllegalArgumentException("Initial balance is created with the account");
         }
+        requirePositive(request.getAmount());
+        applyBalanceChange(account, request.getType(), request.getAmount());
 
         Transaction transaction = new Transaction();
         transaction.setAmount(request.getAmount());
-        transaction.setType(effectiveType);
+        transaction.setType(request.getType());
         transaction.setDescription(request.getDescription());
-        transaction.setTransactionDate(request.getTransactionDate());
+        transaction.setTransactionDate(request.getTransactionDate() != null ? request.getTransactionDate() : LocalDate.now());
         transaction.setUser(user);
         transaction.setCategory(category);
         transaction.setSubcategory(subcategory);
@@ -105,42 +96,72 @@ public class TransactionService {
         return transactionRepository.findAll(spec);
     }
 
+    @Transactional
     public void deleteTransactionById(Long id) {
 
         Long userId = userService.getCurrentUser().getId();
         Transaction transaction = transactionRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new AccessDeniedException("No access to this transaction"));
 
-        Account account = transaction.getAccount();
-
-        if (CategoryType.INCOME.equals(transaction.getType())) {
-            account.setBalance(account.getBalance().subtract(transaction.getAmount()));
-        } else if (CategoryType.EXPENSE.equals(transaction.getType())) {
-            account.setBalance(account.getBalance().add(transaction.getAmount()));
+        if (transaction.getType() == CategoryType.INITIAL_BALANCE) {
+            throw new IllegalArgumentException("Initial balance transaction cannot be deleted");
         }
-
-        accountRepository.save(account);
+        Account account = getAccessibleAccount(transaction.getAccount().getId(), userId);
+        applyBalanceChange(account, transaction.getType(), transaction.getAmount().negate());
         transactionRepository.delete(transaction);
     }
 
+    @Transactional
     public Transaction updateTransaction(Long id, UpdateTransactionRequest request) {
         Long userId = userService.getCurrentUser().getId();
         Transaction transaction = transactionRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new AccessDeniedException("No access to this transaction"));
-        if (request.getAmount() != null && request.getAmount().compareTo(transaction.getAmount()) != 0) {
-            BigDecimal diff = request.getAmount().subtract(transaction.getAmount());
-            Account account = transaction.getAccount();
-            if (transaction.getType() == CategoryType.INCOME) {
-                account.setBalance(account.getBalance().add(diff));
-            } else if (transaction.getType() == CategoryType.EXPENSE) {
-                account.setBalance(account.getBalance().subtract(diff));
-            }
-            accountRepository.save(account);
-            transaction.setAmount(request.getAmount());
+        if (transaction.getType() == CategoryType.INITIAL_BALANCE) {
+            throw new IllegalArgumentException("Initial balance transaction cannot be edited");
         }
-
+        Account account = getAccessibleAccount(transaction.getAccount().getId(), userId);
+        Category category = request.getCategoryId() == null ? transaction.getCategory()
+                : categoryRepository.findById(request.getCategoryId())
+                .orElseThrow(() -> new CategoryException(request.getCategoryId()));
+        Subcategory subcategory = request.getSubcategoryId() == null ? transaction.getSubcategory()
+                : subcategoryRepository.findById(request.getSubcategoryId())
+                .orElseThrow(() -> new SubcategoryException(request.getSubcategoryId()));
+        if (request.getCategoryId() != null || request.getSubcategoryId() != null) {
+            validateCategory(category, subcategory, transaction.getType());
+        }
+        if (request.getAmount() != null) {
+            requirePositive(request.getAmount());
+            applyBalanceChange(account, transaction.getType(), request.getAmount().subtract(transaction.getAmount()));
+        }
         updateExistingTransactionWithPatch(transaction, request);
         return transactionRepository.save(transaction);
+    }
+
+    private Account getAccessibleAccount(Long accountId, Long userId) {
+        Account account = accountRepository.findByIdWithLock(accountId)
+                .orElseThrow(() -> new AccountException(accountId));
+        if (account.getDeletedAt() != null || account.getGroup().getUsers().stream()
+                .noneMatch(member -> member.getId().equals(userId))) {
+            throw new AccessDeniedException("No access to this account");
+        }
+        return account;
+    }
+
+    private void validateCategory(Category category, Subcategory subcategory, CategoryType type) {
+        if (category.getType() != type || !subcategory.getCategory().getId().equals(category.getId())) {
+            throw new IllegalArgumentException("Category, subcategory and transaction type must match");
+        }
+    }
+
+    private void requirePositive(BigDecimal amount) {
+        if (amount == null || amount.signum() <= 0) {
+            throw new IllegalArgumentException("Amount must be positive");
+        }
+    }
+
+    private void applyBalanceChange(Account account, CategoryType type, BigDecimal amount) {
+        BigDecimal delta = type == CategoryType.EXPENSE ? amount.negate() : amount;
+        account.setBalance(account.getBalance().add(delta));
     }
 
     private void updateExistingTransactionWithPatch(Transaction existingTransaction, UpdateTransactionRequest request) {

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -18,6 +19,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
     Optional<Transaction> findByIdAndUserEmail(Long id, String email);
     Optional<Transaction> findByIdAndUserId(Long id, Long userId);
     boolean existsByAccountIdAndTypeNot(Long id, CategoryType type);
+    boolean existsByAccountId(Long id);
     void deleteByAccountId(Long id);
 
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t " +
@@ -79,4 +81,9 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
             @Param("type") CategoryType categoryType,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT t FROM Transaction t JOIN FETCH t.account a " +
+            "WHERE a.id IN :accountIds AND t.transactionDate <= :endDate")
+    List<Transaction> findForHistoricalReport(@Param("accountIds") List<Long> accountIds,
+                                              @Param("endDate") LocalDate endDate);
 }
