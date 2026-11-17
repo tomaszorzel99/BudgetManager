@@ -67,6 +67,36 @@ class TransactionServiceTest {
         assertNotNull(transaction.getTransactionDate());
     }
 
+    @Test
+    void deletingExpenseRestoresAccountBalance() {
+        User user = new User();
+        user.setId(1L);
+
+        Account account = account(10L);
+        account.setBalance(new BigDecimal("75.00"));
+        account.getGroup().getUsers().add(user);
+
+        Transaction expense = new Transaction();
+        expense.setId(40L);
+        expense.setAccount(account);
+        expense.setType(CategoryType.EXPENSE);
+        expense.setAmount(new BigDecimal("25.00"));
+
+        when(userService.getCurrentUser()).thenReturn(user);
+        when(transactionRepository.findByIdAndUserId(40L, 1L))
+                .thenReturn(Optional.of(expense));
+        when(accountRepository.findByIdWithLock(10L))
+                .thenReturn(Optional.of(account));
+
+        service.deleteTransactionById(40L);
+
+        assertEquals(
+                0,
+                new BigDecimal("100.00").compareTo(account.getBalance())
+        );
+        verify(transactionRepository).delete(expense);
+    }
+
     private Account account(Long id) {
         Account account = new Account();
         account.setId(id);
