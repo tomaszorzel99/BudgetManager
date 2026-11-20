@@ -1354,7 +1354,7 @@
         const h={'Content-Type':'application/json'};
         if(tok)h['Authorization']='Bearer '+tok;
         const res=await fetch(API+path,{method,headers:h,body:body?JSON.stringify(body):null});
-        if(res.status===401){doLogout();return null;}
+        if(res.status===401&&tok){doLogout();return null;}
         if(res.status===204)return{ok:true};
         const data=await res.json().catch(()=>null);
         if(!res.ok)throw new Error(data?.message||'Błąd serwera ('+res.status+')');
@@ -1382,7 +1382,11 @@
         try{await req('POST','/api/auth/register',{name,email,password:pass});toast('Konto utworzone!','ok');document.getElementById('l-email').value=email;showLogin();}
         catch(e){toast(e.message,'err');}
     }
-    function doLogout(){tok=null;document.getElementById('app').style.display='none';document.getElementById('auth-screen').style.display='flex';showLogin();}
+    function doLogout(){
+        const oldTok=tok;tok=null;
+        if(oldTok){fetch(API+'/api/auth/logout',{method:'POST',headers:{'Authorization':'Bearer '+oldTok}}).catch(()=>{});}
+        document.getElementById('app').style.display='none';document.getElementById('auth-screen').style.display='flex';showLogin();
+    }
 
     // ── INIT ─────────────────────────────────────────────────
     async function initApp(){
@@ -2613,7 +2617,8 @@
       <div class="avatar-big">${(user?.name||'?')[0].toUpperCase()}</div>
       <div class="form-group"><label>Imię i nazwisko</label><input class="form-control" id="prof-name" type="text" value="${esc(user?.name||'')}"></div>
       <div class="form-group"><label>E-mail</label><input class="form-control" id="prof-email" type="email" value="${esc(user?.email||'')}"></div>
-      <div class="form-group"><label>Nowe hasło (zostaw puste aby nie zmieniać)</label><input class="form-control" id="prof-pass" type="password" placeholder="••••••••"></div>
+      <div class="form-group"><label>Nowe hasło (zostaw puste aby nie zmieniać)</label><input class="form-control" id="prof-pass"
+      <div class="form-group"><label>Obecne hasło (wymagane przy zmianie e-maila lub hasła)</label><input class="form-control" id="prof-current-pass" type="password" autocomplete="current-password"></div> type="password" placeholder="••••••••"></div>
       <button class="btn btn-primary" onclick="submitProfileUpdate()">Zapisz zmiany</button>
     </div>
     <div class="profile-card">
@@ -2625,11 +2630,17 @@
     }
 
     async function submitProfileUpdate(){
-        const name=document.getElementById('prof-name').value.trim(),email=document.getElementById('prof-email').value.trim(),pass=document.getElementById('prof-pass').value;
+        const name=document.getElementById('prof-name').value.trim(),email=document.getElementById('prof-email').value.trim(),pass=document.getElementById('prof-pass').value,currentPassword=document.getElementById('prof-current-pass').value;
         const body={};if(name&&name!==S.user?.name)body.name=name;if(email&&email!==S.user?.email)body.email=email;if(pass)body.password=pass;
         if(!Object.keys(body).length){toast('Brak zmian','err');return;}
-        try{const user=await req('PATCH','/api/users/me',body);S.user=user;document.getElementById('sidebar-name').textContent=user.name;document.getElementById('sidebar-email').textContent=user.email;document.getElementById('sidebar-avatar').textContent=(user.name||'?')[0].toUpperCase();toast('Profil zaktualizowany','ok');if(pass)setTimeout(doLogout,1500);}
-        catch(e){toast(e.message,'err');}
+        const needsRelogin=!!(body.email||body.password);
+        if(needsRelogin){if(!currentPassword){toast('Podaj obecne hasło','err');return;}body.currentPassword=currentPassword;}
+        try{
+            const user=await req('PATCH','/api/users/me',body);S.user=user;
+            document.getElementById('sidebar-name').textContent=user.name;document.getElementById('sidebar-email').textContent=user.email;document.getElementById('sidebar-avatar').textContent=(user.name||'?')[0].toUpperCase();
+            if(needsRelogin){toast('Zapisano. Zaloguj się ponownie','ok');setTimeout(doLogout,1500);}
+            else toast('Profil zaktualizowany','ok');
+        }catch(e){toast(e.message,'err');}
     }
     async function deleteUserAccount(){if(!confirm('Usunąć konto?'))return;try{await req('DELETE','/api/users/me');doLogout();}catch(e){toast(e.message,'err');}}
 

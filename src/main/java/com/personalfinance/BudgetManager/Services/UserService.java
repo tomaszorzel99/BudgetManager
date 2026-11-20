@@ -2,6 +2,7 @@ package com.personalfinance.BudgetManager.Services;
 
 import com.personalfinance.BudgetManager.DTO.UpdateUserRequest;
 import com.personalfinance.BudgetManager.Exception.EmailException;
+import com.personalfinance.BudgetManager.Exception.InvalidCurrentPasswordException;
 import com.personalfinance.BudgetManager.Exception.UserException;
 import com.personalfinance.BudgetManager.Model.User;
 import com.personalfinance.BudgetManager.Repositories.UserRepository;
@@ -51,7 +52,7 @@ public class UserService {
     public void deleteUser(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserException(email));
-        user.setEmail("Deleted" + UUID.randomUUID() + "_" + email);
+        user.setEmail("Deleted_" + user.getId() + "_" + UUID.randomUUID() + "_" + "@deleted.invalid");
         user.setName("DELETED");
         user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
         user.setEnabled(false);
@@ -59,16 +60,34 @@ public class UserService {
     }
 
     public void updateExistingUserWithPatch(User existingUser, UpdateUserRequest request) {
-        if (request.getName() != null) existingUser.setName(request.getName());
-        if (request.getEmail() != null && !request.getEmail().equals(existingUser.getEmail())) {
-            if (userRepository.existsByEmail(request.getEmail())) {
-                throw new EmailException(request.getEmail());
-            }
-            existingUser.setEmail(request.getEmail());
+        if (request.getName() != null) {
+            existingUser.setName(request.getName().trim());
         }
-        if (request.getPassword() != null && !request.getPassword().isBlank()) {
-            String encodedPassword = passwordEncoder.encode(request.getPassword());
-            existingUser.setPassword(encodedPassword);
+
+        String newEmail = AuthService.normalizeEmail(request.getEmail());
+        boolean emailChange = newEmail != null && !newEmail.equalsIgnoreCase(existingUser.getEmail());
+        boolean passwordChange = request.getPassword() != null && !request.getPassword().isBlank();
+
+        if (emailChange || passwordChange) {
+            String currentPassword = request.getCurrentPassword();
+            if (currentPassword == null || !passwordEncoder.matches(currentPassword, existingUser.getPassword())) {
+                throw new InvalidCurrentPasswordException();
+            }
+        }
+
+        if (emailChange) {
+            if (userRepository.existsByEmail(newEmail)) {
+                throw new EmailException(newEmail);
+            }
+            existingUser.setEmail(newEmail);
+        }
+
+        if (passwordChange) {
+            existingUser.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+
+        if (emailChange || passwordChange) {
+            existingUser.revokeTokens();
         }
     }
 }

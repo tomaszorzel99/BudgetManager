@@ -36,8 +36,15 @@ public class User extends AuditableEntity {
     @Column(nullable = false)
     private boolean enabled = true;
 
+    @Column(name = "token_version", nullable = false)
+    private int tokenVersion;
+
     @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(name = "user_user_group", joinColumns = @JoinColumn(name = "user_id"),
     inverseJoinColumns = @JoinColumn(name = "group_id"))
     private Set<UserGroup> userGroups = new HashSet<>();
+
+    public void revokeTokens() {
+        this.tokenVersion++;
+    }
 }

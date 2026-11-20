@@ -81,6 +81,12 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.CONFLICT, exception.getMessage(), request);
     }
 
+    //  429 TOO MANY REQUESTS — za dużo nieudanych logowań
+    @ExceptionHandler(TooManyLoginAttemptsException.class)
+    public ResponseEntity<ApiError> handleTooManyLoginAttempts(TooManyLoginAttemptsException exception, HttpServletRequest request){
+        return buildError(HttpStatus.TOO_MANY_REQUESTS, exception.getMessage(), request);
+    }
+
     //  422 UNPROCESSABLE ENTITY — logika biznesowa
 
     @ExceptionHandler(InsufficientFundsException.class)
@@ -95,6 +101,11 @@ public class GlobalExceptionHandler {
 
 
     //  400 BAD REQUEST — błędne dane wejściowe
+
+    @ExceptionHandler(InvalidCurrentPasswordException.class)
+    public ResponseEntity<ApiError> handleInvalidCurrentPassword(InvalidCurrentPasswordException exception, HttpServletRequest request){
+        return buildError(HttpStatus.BAD_REQUEST, exception.getMessage(), request);
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleMethodArgumentNotValidException(MethodArgumentNotValidException exception, HttpServletRequest request){
@@ -143,7 +154,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiError> handleGenericAuthError(AuthenticationException exception, HttpServletRequest request) {
 
-        return buildError(HttpStatus.UNAUTHORIZED, "Authentication error: " + exception.getMessage(), request);
+        return buildError(HttpStatus.UNAUTHORIZED, "Invalid email or password ", request);
     }
 
 
