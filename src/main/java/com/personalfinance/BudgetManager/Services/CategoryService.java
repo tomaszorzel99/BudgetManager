@@ -7,6 +7,7 @@ import com.personalfinance.BudgetManager.Model.Category;
 import com.personalfinance.BudgetManager.Model.CategoryType;
 import com.personalfinance.BudgetManager.Repositories.CategoryRepository;
 import org.springframework.security.access.AccessDeniedException;
+import java.util.Locale;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -25,7 +26,7 @@ public class CategoryService {
         Category category = new Category();
         category.setName(request.getName());
         category.setDescription(request.getDescription());
-        category.setColor(request.getColor());
+        category.setColor(request.getColor().toUpperCase(Locale.ROOT));
         category.setType(request.getType());
         return categoryRepository.save(category);
     }
@@ -58,8 +59,8 @@ public class CategoryService {
             existingCategory.setDescription(request.getDescription());
         }
         if (request.getCategoryType() != null) existingCategory.setType(request.getCategoryType());
-        if (!(request.getColor() == null)) {
-            existingCategory.setColor(request.getColor());
+        if (request.getColor() != null) {
+            existingCategory.setColor(request.getColor().toUpperCase(Locale.ROOT));
         }
     }
 

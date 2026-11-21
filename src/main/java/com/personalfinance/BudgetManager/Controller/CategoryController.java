@@ -47,7 +47,7 @@ public class CategoryController {
 
     @PatchMapping("/{id}")
     public ResponseEntity<CategoryDTO> updateCategory(@PathVariable Long id,
-                                                      @RequestBody UpdateCategoryRequest request) {
+                                                      @Valid @RequestBody UpdateCategoryRequest request) {
         Category category = categoryService.updateCategory(id, request);
         return ResponseEntity.ok().body(categoryMapper.convertToDTO(category));
     }

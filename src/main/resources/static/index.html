@@ -1185,7 +1185,7 @@
             <div class="form-group"><label>Typ</label>
                 <select class="form-control" id="cat-type"><option value="INCOME">Przychód</option><option value="EXPENSE">Wydatek</option></select>
             </div>
-            <div class="form-group"><label>Kolor (hex)</label><input class="form-control" id="cat-color" type="text" placeholder="#6C47FF" value="#6C47FF"></div>
+            <div class="form-group"><label>Kolor</label><input class="form-control" id="cat-color" type="color" value="#6C47FF" style="height:42px;padding:4px;cursor:pointer"></div>
         </div>
         <div class="form-group"><label>Opis (opcjonalnie)</label><input class="form-control" id="cat-desc" type="text" placeholder="Krótki opis"></div>
         <div class="modal-footer">
@@ -1282,9 +1282,15 @@
 
     const catColorMap = {};
     let catColorIdx = 0;
+    function ownCategoryColor(name) {
+        const c = (S.categories || []).find(c => c.name === name);
+        return c && /^#[0-9a-fA-F]{6}$/.test(c.color || '') ? c.color : null;
+    }
     function getColorsForLabels(labels) {
         return labels.map(l => {
-            if(!catColorMap[l]) {
+            const own = ownCategoryColor(l);
+            if (own) return own;
+            if (!catColorMap[l]) {
                 catColorMap[l] = COLORS[catColorIdx % COLORS.length];
                 catColorIdx++;
             }
@@ -1332,7 +1338,7 @@
     function txBadge(t){const m={INCOME:`<span class="badge badge-income">↑ Przychód</span>`,EXPENSE:`<span class="badge badge-expense">↓ Wydatek</span>`,INITIAL_BALANCE:`<span class="badge badge-initial">Saldo pocz.</span>`,ADJUSTMENT:`<span class="badge badge-adjust">⚖ Wyrównanie</span>`};return m[t]||`<span class="badge">${esc(t)}</span>`;}
     function txAmtClass(t){return{INCOME:'sv-pos',EXPENSE:'sv-neg',INITIAL_BALANCE:'sv-yel',ADJUSTMENT:'sv-pur'}[t]||'sv-neu';}
     function txAmtPfx(t){return{INCOME:'+',EXPENSE:'-',INITIAL_BALANCE:'',ADJUSTMENT:'±'}[t]||'';}
-    function catColor(name,idx){return CAT_COLORS[name]||COLORS[idx%COLORS.length];}
+    function catColor(name,idx){return ownCategoryColor(name)||CAT_COLORS[name]||COLORS[idx%COLORS.length];}
     function destroyChart(k){if(charts[k]){charts[k].destroy();delete charts[k];}}
     function destroyAll(){Object.keys(charts).forEach(k=>charts[k].destroy());charts={};}
 

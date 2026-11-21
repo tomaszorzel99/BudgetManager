@@ -23,7 +23,7 @@ public class Category {
 
     private String description;
 
-    @Column(length = 7)
+    @Column(length = 7, nullable = false)
     private String color;
 
     @Enumerated(EnumType.STRING)
