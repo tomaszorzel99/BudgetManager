@@ -18,6 +18,8 @@ public class TransactionDTO {
     private Long accountId;
     private String accountName;
     private String userName;
+    private Long categoryId;
+    private Long subcategoryId;
     private String categoryName;
     private String subcategoryName;
 }

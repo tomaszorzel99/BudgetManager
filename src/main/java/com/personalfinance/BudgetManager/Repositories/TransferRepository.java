@@ -111,4 +111,8 @@ public interface TransferRepository extends JpaRepository<Transfer, Long> {
                                                 @Param("accountType") AccountType accountType,
                                                 @Param("startDate") LocalDate startDate,
                                                 @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT t FROM Transfer t JOIN FETCH t.fromAccount JOIN FETCH t.toAccount " +
+            "WHERE t.fromAccount.id = :accountId OR t.toAccount.id = :accountId")
+    List<Transfer> findAllForAccountHistory(@Param("accountId") Long accountId);
 }

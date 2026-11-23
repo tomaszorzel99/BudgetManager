@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -15,6 +16,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.LocalDateTime;
 import java.util.stream.Collectors;
@@ -68,6 +70,11 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.NOT_FOUND, exception.getMessage(), request);
     }
 
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiError> handleResourceNotFound(ResourceNotFoundException exception, HttpServletRequest request){
+        return buildError(HttpStatus.NOT_FOUND, exception.getMessage(), request);
+    }
+
     @ExceptionHandler(GroupException.class)
     public ResponseEntity<ApiError> handleGroupException(GroupException exception, HttpServletRequest request){
         return buildError(HttpStatus.NOT_FOUND, exception.getMessage(), request);
@@ -79,6 +86,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(EmailException.class)
     public ResponseEntity<ApiError> handleEmailException(EmailException exception, HttpServletRequest request){
         return buildError(HttpStatus.CONFLICT, exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiError> handleDataIntegrity(DataIntegrityViolationException exception, HttpServletRequest request){
+        log.warn("Data integrity violation for {}: {}", request.getRequestURI(), exception.getMostSpecificCause().getMessage());
+        return buildError(HttpStatus.CONFLICT, "This item is in use and cannot be changed or deleted", request);
     }
 
     //  429 TOO MANY REQUESTS — za dużo nieudanych logowań
@@ -96,7 +109,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InvitationException.class)
     public ResponseEntity<ApiError> handleInvitationException(InvitationException exception, HttpServletRequest request){
-        return buildError(HttpStatus.UNPROCESSABLE_ENTITY, exception.getMessage(), request);
+        return buildError(exception.getStatus(), exception.getMessage(), request);
     }
 
 
@@ -105,6 +118,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidCurrentPasswordException.class)
     public ResponseEntity<ApiError> handleInvalidCurrentPassword(InvalidCurrentPasswordException exception, HttpServletRequest request){
         return buildError(HttpStatus.BAD_REQUEST, exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException exception, HttpServletRequest request) {
+        return buildError(HttpStatus.BAD_REQUEST, "Invalid value for parameter: " + exception.getName(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

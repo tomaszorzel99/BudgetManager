@@ -1,0 +1,34 @@
+package com.personalfinance.BudgetManager.Repositories;
+
+import com.personalfinance.BudgetManager.Model.RecurringTransaction;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
+public interface RecurringTransactionRepository extends JpaRepository<RecurringTransaction, Long> {
+
+    @Query("SELECT r FROM RecurringTransaction r JOIN FETCH r.account JOIN FETCH r.category " +
+            "JOIN FETCH r.subcategory WHERE r.user.id = :userId ORDER BY r.active DESC, r.nextDate ASC")
+    List<RecurringTransaction> findAllForUser(@Param("userId") Long userId);
+
+    Optional<RecurringTransaction> findByIdAndUserId(Long id, Long userId);
+
+    @Query("SELECT r FROM RecurringTransaction r JOIN FETCH r.user " +
+            "WHERE r.active = true AND r.autoPost = true AND r.nextDate <= :date")
+    List<RecurringTransaction> findDueForAutoPost(@Param("date") LocalDate date);
+
+    boolean existsByAccountId(Long accountId);
+
+    @Modifying
+    @Query("DELETE FROM RecurringTransaction r WHERE r.account.id = :accountId")
+    int deleteAllForAccount(@Param("accountId") Long accountId);
+
+    @Modifying
+    @Query("UPDATE RecurringTransaction r SET r.active = false WHERE r.account.id = :accountId")
+    int deactivateAllForAccount(@Param("accountId") Long accountId);
+}

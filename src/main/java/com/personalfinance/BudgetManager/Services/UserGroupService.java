@@ -1,6 +1,7 @@
 package com.personalfinance.BudgetManager.Services;
 
 import com.personalfinance.BudgetManager.DTO.CreateGroupRequest;
+import com.personalfinance.BudgetManager.Exception.GroupException;
 import com.personalfinance.BudgetManager.Model.User;
 import com.personalfinance.BudgetManager.Model.UserGroup;
 import com.personalfinance.BudgetManager.Repositories.UserGroupRepository;
@@ -21,11 +22,16 @@ public class UserGroupService {
 
     public UserGroup getById(Long id) {
         return userGroupRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Group not found"));
+                .orElseThrow(() -> new GroupException(id));
+    }
+
+    public static boolean isMember(User user, UserGroup group) {
+        return user.getUserGroups().stream()
+                .anyMatch(g -> g.getId() != null && g.getId().equals(group.getId()));
     }
 
     public void ensureUserIsMember(User user, UserGroup group) {
-        if (!user.getUserGroups().contains(group)) {
+        if (!isMember(user, group)) {
             throw new AccessDeniedException("User is not member of this group");
         }
     }

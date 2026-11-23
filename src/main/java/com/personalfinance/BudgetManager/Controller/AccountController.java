@@ -2,11 +2,13 @@ package com.personalfinance.BudgetManager.Controller;
 
 import com.personalfinance.BudgetManager.Controller.DTO.CustomUserDetails;
 import com.personalfinance.BudgetManager.DTO.AccountDTO;
+import com.personalfinance.BudgetManager.DTO.AccountHistoryDTO;
 import com.personalfinance.BudgetManager.DTO.CreateAccountRequest;
 import com.personalfinance.BudgetManager.DTO.UpdateAccountRequest;
 import com.personalfinance.BudgetManager.Mapper.AccountMapper;
 import com.personalfinance.BudgetManager.Model.Account;
 import com.personalfinance.BudgetManager.Model.User;
+import com.personalfinance.BudgetManager.Services.AccountHistoryService;
 import com.personalfinance.BudgetManager.Services.AccountService;
 import com.personalfinance.BudgetManager.Services.UserService;
 import jakarta.transaction.Transactional;
@@ -29,13 +31,20 @@ public class AccountController {
     private final AccountService accountService;
     private final AccountMapper accountMapper;
     private final UserService userService;
+    private final AccountHistoryService accountHistoryService;
 
-    public AccountController(AccountService accountService, AccountMapper accountMapper, UserService userService) {
+    public AccountController(AccountService accountService, AccountMapper accountMapper, UserService userService, AccountHistoryService accountHistoryService) {
         this.accountService = accountService;
         this.accountMapper = accountMapper;
         this.userService = userService;
+        this.accountHistoryService = accountHistoryService;
     }
 
+    @GetMapping("/{id}/history")
+    public ResponseEntity<AccountHistoryDTO> getAccountHistory(@PathVariable Long id,
+                                                               @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(accountHistoryService.getHistory(id, userDetails.getId()));
+    }
 
     @PostMapping
     @Transactional

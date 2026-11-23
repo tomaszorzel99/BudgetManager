@@ -25,8 +25,10 @@ public class AccountService {
     private final CategoryRepository categoryRepository;
     private final SubcategoryRepository subcategoryRepository;
     private final TransferRepository transferRepository;
+    private final RecurringTransactionRepository recurringTransactionRepository;
+    private final SavingsGoalRepository savingsGoalRepository;
 
-    public AccountService(AccountRepository accountRepository, UserRepository userRepository, UserService userService, TransactionRepository transactionRepository, CategoryRepository categoryRepository, SubcategoryRepository subcategoryRepository, TransferRepository transferRepository) {
+    public AccountService(AccountRepository accountRepository, UserRepository userRepository, UserService userService, TransactionRepository transactionRepository, CategoryRepository categoryRepository, SubcategoryRepository subcategoryRepository, TransferRepository transferRepository, RecurringTransactionRepository recurringTransactionRepository, SavingsGoalRepository savingsGoalRepository) {
         this.accountRepository = accountRepository;
         this.userRepository = userRepository;
         this.userService = userService;
@@ -34,6 +36,8 @@ public class AccountService {
         this.categoryRepository = categoryRepository;
         this.subcategoryRepository = subcategoryRepository;
         this.transferRepository = transferRepository;
+        this.recurringTransactionRepository = recurringTransactionRepository;
+        this.savingsGoalRepository = savingsGoalRepository;
     }
 
     @Transactional
@@ -96,6 +100,8 @@ public class AccountService {
         if (transferRepository.existsByFromAccountIdOrToAccountId(id, id)) {
             throw new IllegalStateException("Cannot delete account with transfers. Please archive the account instead.");
         }
+        recurringTransactionRepository.deleteAllForAccount(id);
+        savingsGoalRepository.unlinkAccount(id);
         transactionRepository.deleteByAccountId(id);
         accountRepository.delete(account);
     }

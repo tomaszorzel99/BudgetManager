@@ -86,4 +86,22 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
             "WHERE a.id IN :accountIds AND t.transactionDate <= :endDate")
     List<Transaction> findForHistoricalReport(@Param("accountIds") List<Long> accountIds,
                                               @Param("endDate") LocalDate endDate);
+
+    /** Suma wydatków użytkownika wg kategorii w okresie, tylko z kont w danej walucie. */
+    @Query("SELECT t.category.id, COALESCE(SUM(t.amount), 0) FROM Transaction t " +
+            "WHERE t.user.id = :userId " +
+            "AND t.type = com.personalfinance.BudgetManager.Model.CategoryType.EXPENSE " +
+            "AND UPPER(t.account.currency) = :currency " +
+            "AND t.transactionDate BETWEEN :startDate AND :endDate " +
+            "GROUP BY t.category.id")
+    List<Object[]> sumExpensesByCategory(@Param("userId") Long userId,
+                                         @Param("currency") String currency,
+                                         @Param("startDate") LocalDate startDate,
+                                         @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT t FROM Transaction t JOIN FETCH t.user JOIN FETCH t.category JOIN FETCH t.subcategory " +
+            "WHERE t.account.id = :accountId")
+    List<Transaction> findAllForAccountHistory(@Param("accountId") Long accountId);
+
+    boolean existsByCategoryId(Long categoryId);
 }

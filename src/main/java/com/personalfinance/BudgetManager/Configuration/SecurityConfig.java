@@ -56,6 +56,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/",
                                 "/index.html",
+                                "/index-stary.html",
+
                                 "/favicon.ico",
                                 "/api/auth/**",
                                 "/v3/api-docs/**",
@@ -108,6 +110,7 @@ public class SecurityConfig {
         config.setAllowedOrigins(corsProperties.allowedOrigins());
         config.setAllowedMethods(List.of("GET", "POST", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        config.setExposedHeaders(List.of("Content-Disposition"));
         config.setAllowCredentials(false);
         config.setMaxAge(3600L);
 
