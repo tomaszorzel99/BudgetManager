@@ -99,7 +99,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
                                          @Param("startDate") LocalDate startDate,
                                          @Param("endDate") LocalDate endDate);
 
-    @Query("SELECT t FROM Transaction t JOIN FETCH t.user JOIN FETCH t.category JOIN FETCH t.subcategory " +
+    @Query("SELECT t FROM Transaction t JOIN FETCH t.user JOIN FETCH t.category LEFT JOIN FETCH t.subcategory " +
             "WHERE t.account.id = :accountId")
     List<Transaction> findAllForAccountHistory(@Param("accountId") Long accountId);
 

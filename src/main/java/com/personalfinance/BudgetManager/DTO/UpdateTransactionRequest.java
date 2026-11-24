@@ -15,4 +15,5 @@ public class UpdateTransactionRequest {
     private LocalDate transactionDate;
     private Long categoryId;
     private Long subcategoryId;
+    private Boolean clearSubcategory;
 }

@@ -46,7 +46,8 @@ public class AccountHistoryService {
             BigDecimal amount = t.getType() == CategoryType.EXPENSE ? t.getAmount().negate() : t.getAmount();
             rows.add(new Row(t.getTransactionDate(), t.getCreatedAt(), t.getId(), new AccountHistoryEntryDTO(
                     "TRANSACTION", t.getId(), t.getTransactionDate(), t.getType().name(), t.getDescription(),
-                    t.getCategory().getName(), t.getSubcategory().getName(), t.getCategory().getColor(), null,
+                    t.getCategory().getName(), t.getSubcategory() != null ? t.getSubcategory().getName() : null,
+                    t.getCategory().getColor(), null,
                     t.getUser() != null ? t.getUser().getName() : null, amount, null)));
         }
         for (Transfer t : transferRepository.findAllForAccountHistory(accountId)) {

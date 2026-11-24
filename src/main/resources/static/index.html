@@ -573,6 +573,10 @@
     function catByName(name, type){ return S.categories.find(c=>c.name===name && (!type || c.type===type)) || S.categories.find(c=>c.name===name); }
     function catColor(name, idx=0){ const c = catByName(name); return (c && /^#[0-9a-f]{6}$/i.test(c.color||'')) ? c.color : PALETTE[idx%PALETTE.length]; }
     function subsOf(cat){ return S.subcategories.filter(s=>s.categoryName===cat.name); }
+    const NO_SUB = 'Bez podkategorii';
+    function subOptions(subs, selectedId){
+        return `<option value="">— ${NO_SUB} —</option>` + subs.map(s=>`<option value="${s.id}" ${String(s.id)===String(selectedId)?'selected':''}>${esc(s.name)}</option>`).join('');
+    }
     function currencies(){ return [...new Set(S.accounts.map(a=>(a.currency||'PLN').toUpperCase()))]; }
     function pickMainCurrency(){
         const cs = currencies(); if(!cs.length) return 'PLN';
@@ -1080,18 +1084,15 @@
             type = k; $$('#tx-type button', m).forEach(b=>b.classList.toggle('on', b.dataset.k===k));
             const cats = S.categories.filter(c=>c.type===k);
             $('#tx-cat',m).innerHTML = cats.length ? cats.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('') : '<option value="">Brak kategorii</option>';
-            if (editing){ const ec = catByName(editing.categoryName, k); if (ec) $('#tx-cat',m).value = ec.id; }
+            if (editing){ const ec = cats.find(c=>c.id===editing.categoryId) || catByName(editing.categoryName, k); if (ec) $('#tx-cat',m).value = ec.id; }
             fillSubs();
         };
         const fillSubs = ()=>{
             const cat = S.categories.find(c=>String(c.id)===$('#tx-cat',m).value);
             const subs = cat ? subsOf(cat) : [];
-            $('#tx-sub',m).innerHTML = subs.length ? subs.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('') : '<option value="">—</option>';
-            if (editing){ const es = subs.find(s=>s.name===editing.subcategoryName); if (es) $('#tx-sub',m).value = es.id; }
+            $('#tx-sub',m).innerHTML = subOptions(subs, editing && cat && cat.id===editing.categoryId ? editing.subcategoryId : null);
             const warn = $('#tx-nosub',m);
             if (!cat) { warn.innerHTML = `Brak kategorii tego typu. <a href="#categories" data-close-go="categories">Dodaj kategorię</a>`; warn.classList.remove('hidden'); }
-            else if (!subs.length) { warn.innerHTML = `Kategoria „${esc(cat.name)}” nie ma podkategorii, a są one wymagane. <a href="#" id="tx-addsub">Dodaj podkategorię</a>`; warn.classList.remove('hidden');
-                $('#tx-addsub',m).onclick = e=>{ e.preventDefault(); subModal(null, cat.id, ()=>fillSubs()); }; }
             else warn.classList.add('hidden');
             $$('[data-close-go]',m).forEach(a=>a.onclick=e=>{ e.preventDefault(); closeModal(); go(a.dataset.closeGo); });
         };
@@ -1105,11 +1106,9 @@
             const transactionDate = $('#tx-date',m).value || isoLocal(), description = $('#tx-desc',m).value.trim();
             if (!(amount>0)) return toast('Podaj kwotę większą od zera','err');
             if (!categoryId) return toast('Wybierz kategorię','err');
-            if (!subcategoryId) return toast('Wybierz podkategorię','err');
             try {
                 if (editing) {
-                    await api('PATCH','/api/transactions/'+editing.id,{amount, description:description||null, transactionDate, categoryId, subcategoryId});
-                    toast('Zapisano zmiany');
+                    await api('PATCH','/api/transactions/'+editing.id,{amount, description:description||null, transactionDate, categoryId, subcategoryId, clearSubcategory:!subcategoryId});
                 } else {
                     await api('POST','/api/transactions',{amount, type, accountId:+$('#tx-acc',m).value, categoryId, subcategoryId, transactionDate, description:description||undefined});
                     toast(type==='EXPENSE'?'Dodano wydatek':type==='INCOME'?'Dodano przychód':'Dodano korektę');
@@ -1307,10 +1306,9 @@
         };
         const fillSub = ()=>{
             const cat = S.categories.find(c=>String(c.id)===$('#adj-cat',m).value), subs = cat?subsOf(cat):[];
-            $('#adj-sub',m).innerHTML = subs.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('') || '<option value="">—</option>';
+            $('#adj-sub',m).innerHTML = subOptions(subs);
             const w = $('#adj-warn',m);
             if (diff>=0 && !adjCats.length){ w.textContent = 'Brak kategorii typu „Korekta”. Dodaj ją w zakładce Kategorie.'; w.classList.remove('hidden'); }
-            else if (cat && !subs.length){ w.textContent = `Kategoria „${cat.name}” nie ma podkategorii.`; w.classList.remove('hidden'); }
             else w.classList.add('hidden');
         };
         $('#adj-new',m).oninput = ()=>{
@@ -1324,8 +1322,8 @@
         $('#adj-save',m).onclick = e=>withBtn(e.currentTarget, async ()=>{
             if ($('#adj-new',m).value==='') return toast('Podaj nowe saldo','err');
             if (!diff) return toast('Saldo się nie zmienia','err');
-            const categoryId = +$('#adj-cat',m).value, subcategoryId = +$('#adj-sub',m).value;
-            if (!categoryId || !subcategoryId) return toast('Wybierz kategorię i podkategorię','err');
+            const categoryId = +$('#adj-cat',m).value, subcategoryId = +$('#adj-sub',m).value || null;
+            if (!categoryId) return toast('Wybierz kategorię','err');
             try {
                 await api('POST','/api/transactions',{amount:Math.abs(diff), type:diff>0?'ADJUSTMENT':'EXPENSE', accountId:a.id, categoryId, subcategoryId, transactionDate:isoLocal(), description:'Korekta salda'});
                 toast('Saldo skorygowane'); closeModal(); await refreshAccounts(); S.allTx=null; rerender();
@@ -1389,7 +1387,7 @@
 
         const breakdown = type => {
             const m = {};
-            mtx.filter(t=>t.type===type).forEach(t=>{ const e = m[t.categoryName] = m[t.categoryName]||{v:0,subs:{}}; e.v+=num(t.amount); e.subs[t.subcategoryName]=(e.subs[t.subcategoryName]||0)+num(t.amount); });
+            mtx.filter(t=>t.type===type).forEach(t=>{ const e = m[t.categoryName] = m[t.categoryName]||{v:0,subs:{}}; e.v+=num(t.amount); const sn = t.subcategoryName||NO_SUB; e.subs[sn]=(e.subs[sn]||0)+num(t.amount); });
             return Object.entries(m).sort((a,b)=>b[1].v-a[1].v);
         };
         const expB = breakdown('EXPENSE'), incB = breakdown('INCOME');
@@ -1646,7 +1644,7 @@
         const exp = txs.filter(t=>t.type==='EXPENSE');
         if (st.cat && !exp.some(t=>t.categoryName===st.cat)) st.cat = null;
         const agg = {};
-        (st.cat ? exp.filter(t=>t.categoryName===st.cat) : exp).forEach(t=>{ const n = st.cat ? (t.subcategoryName||'—') : t.categoryName; agg[n]=(agg[n]||0)+num(t.amount); });
+        (st.cat ? exp.filter(t=>t.categoryName===st.cat) : exp).forEach(t=>{ const n = st.cat ? (t.subcategoryName||NO_SUB) : t.categoryName; agg[n]=(agg[n]||0)+num(t.amount); });
         const rows = Object.entries(agg).sort((a,b)=>b[1]-a[1]);
         const total = rows.reduce((s,r)=>s+r[1],0);
         if (!rows.length){ box.innerHTML = emptyState('tag','Brak wydatków','W tym okresie nie ma wydatków.'); return; }
@@ -1835,7 +1833,7 @@
         const cells = []; for (let d=new Date(gStart); d<=gEnd; d.setDate(d.getDate()+1)) cells.push(new Date(d));
         c.innerHTML = `
     ${overdue.length?`<div class="card mb" style="border-color:color-mix(in srgb,var(--amber) 40%,var(--border))"><div class="card-h"><span class="cat-ico ico a" style="width:30px;height:30px">${icon('alert')}</span><h3>Zaległe do zaksięgowania (${overdue.length})</h3></div>
-      <div class="list" style="padding:8px 0">${overdue.map(r=>`<div class="li">${catIco(r.categoryName,32)}<div class="main-t"><div class="t1">${esc(r.description||r.subcategoryName)}</div><div class="t2">termin ${fmtDate(r.nextDate)} (${relDay(r.nextDate)}) · ${esc(r.accountName)}</div></div>
+      <div class="list" style="padding:8px 0">${overdue.map(r=>`<div class="li">${catIco(r.categoryName,32)}<div class="main-t"><div class="t1">${esc(r.description||r.subcategoryName||r.categoryName)}</div><div class="t2">termin ${fmtDate(r.nextDate)} (${relDay(r.nextDate)}) · ${esc(r.accountName)}</div></div>
         <div class="amt num ${r.type==='INCOME'?'pos':''}">${r.type==='INCOME'?'+':'−'}${fmtMoney(r.amount,r.currency)}</div>
         <button class="btn btn-ghost btn-sm" onclick="skipRecurring(${r.id})">${icon('skip')}Pomiń</button><button class="btn btn-primary btn-sm" onclick="postRecurring(${r.id})">${icon('check')}Zaksięguj</button></div>`).join('')}</div></div>`:''}
     <div class="grid g-4 mb">
@@ -1859,8 +1857,8 @@
     </div>
     <div class="card"><div class="card-h" style="padding-bottom:8px"><h3>Wszystkie płatności cykliczne</h3><span class="faint">${list.length}</span></div>
       <div class="list" style="padding-bottom:8px">${list.length ? list.map(r=>`<div class="li hov rec-li" style="${r.active?'':'opacity:.55'}">${catIco(r.categoryName,32)}
-        <div class="main-t"><div class="t1">${esc(r.description||r.subcategoryName)} ${r.autoPost?'<span class="chip b" style="font-size:11px;padding:0 6px">auto</span>':''} ${r.active?'':'<span class="chip n" style="font-size:11px;padding:0 6px">wstrzymana</span>'}</div>
-          <div class="t2">${FREQ[r.frequency]||r.frequency} · ${esc(r.categoryName)} / ${esc(r.subcategoryName)} · ${esc(r.accountName)}${r.active?` · następna ${fmtDate(r.nextDate)}`:''}${r.endDate?` · do ${fmtDate(r.endDate)}`:''}</div></div>
+        <div class="main-t"><div class="t1">${esc(r.description||r.subcategoryName||r.categoryName)} ${r.autoPost?'<span class="chip b" style="font-size:11px;padding:0 6px">auto</span>':''} ${r.active?'':'<span class="chip n" style="font-size:11px;padding:0 6px">wstrzymana</span>'}</div>
+          <div class="t2">${FREQ[r.frequency]||r.frequency} · ${esc(r.categoryName)}${r.subcategoryName?' / '+esc(r.subcategoryName):''} · ${esc(r.accountName)}${r.active?` · następna ${fmtDate(r.nextDate)}`:''}${r.endDate?` · do ${fmtDate(r.endDate)}`:''}</div></div>
         <div class="amt num ${r.type==='INCOME'?'pos':''}">${r.type==='INCOME'?'+':'−'}${fmtMoney(r.amount,r.currency)}</div>
         <div class="acts">${r.active?`<button class="icon-btn" title="Zaksięguj teraz" onclick="postRecurring(${r.id})">${icon('check')}</button><button class="icon-btn" title="Pomiń najbliższą" onclick="skipRecurring(${r.id})">${icon('skip')}</button>`:''}
           <button class="icon-btn" title="${r.active?'Wstrzymaj':'Wznów'}" onclick="toggleRecurring(${r.id},${!r.active})">${icon(r.active?'pause':'play')}</button>
@@ -1889,7 +1887,7 @@
     <label class="switch"><div><b style="font-weight:600">Księguj automatycznie</b><div class="hint">W dniu płatności transakcja doda się sama. Bez tego zobaczysz ją jako zaległą do potwierdzenia.</div></div><input type="checkbox" id="rc-auto" ${p.autoPost?'checked':''}></label>`,
             footer:`${ed?`<button class="btn btn-soft-danger" id="rc-del" style="margin-right:auto">${icon('trash')}Usuń</button>`:''}<button class="btn btn-ghost" data-close>Anuluj</button><button class="btn btn-primary" id="rc-save">${ed?'Zapisz':'Dodaj płatność'}</button>`});
         const fillSubs = ()=>{ const cat = S.categories.find(c=>String(c.id)===$('#rc-cat',m).value), subs = cat?subsOf(cat):[];
-            $('#rc-sub',m).innerHTML = subs.map(s=>`<option value="${s.id}" ${s.id===p.subcategoryId?'selected':''}>${esc(s.name)}</option>`).join('') || '<option value="">—</option>'; };
+            $('#rc-sub',m).innerHTML = subOptions(subs, p.subcategoryId); };
         const setType = k=>{ type=k; $$('#rc-type button',m).forEach(b=>b.classList.toggle('on',b.dataset.k===k));
             const cats = S.categories.filter(c=>c.type===k);
             $('#rc-cat',m).innerHTML = cats.map(c=>`<option value="${c.id}" ${c.id===p.categoryId?'selected':''}>${esc(c.name)}</option>`).join('') || '<option value="">Brak kategorii</option>'; fillSubs(); };
@@ -1901,13 +1899,13 @@
             const amount = num($('#rc-amt',m).value), categoryId = +$('#rc-cat',m).value||null, subcategoryId = +$('#rc-sub',m).value||null;
             const startDate = $('#rc-start',m).value, endDate = $('#rc-end',m).value || null;
             if (!(amount>0)) return toast('Podaj kwotę większą od zera','err');
-            if (!categoryId || !subcategoryId) return toast('Wybierz kategorię i podkategorię','err');
+            if (!categoryId) return toast('Wybierz kategorię','err');
             if (!startDate) return toast('Podaj datę płatności','err');
             if (endDate && endDate < startDate) return toast('Data końca jest wcześniejsza niż płatność','err');
             const body = {amount, description:$('#rc-desc',m).value.trim(), frequency:$('#rc-freq',m).value, autoPost:$('#rc-auto',m).checked, accountId:+$('#rc-acc',m).value, categoryId, subcategoryId};
             if (!ed && startDate < todayIso() && body.autoPost && !await confirmBox({title:'Zaksięgować zaległe płatności?', text:`Pierwsza płatność jest w przeszłości (${fmtDate(startDate)}). Przy automatycznym księgowaniu aplikacja doda od razu wszystkie zaległe wystąpienia (maks. 24).`, okText:'Tak, dodaj', danger:false})) return;
             try {
-                if (ed) await api('PATCH','/api/recurring/'+ed.id, {...body, nextDate:startDate, endDate, clearEndDate:!endDate});
+                if (ed) await api('PATCH','/api/recurring/'+ed.id, {...body, nextDate:startDate, endDate, clearEndDate:!endDate, clearSubcategory:!subcategoryId});
                 else await api('POST','/api/recurring', {...body, type, startDate, endDate});
                 toast(ed?'Zapisano zmiany':'Płatność cykliczna dodana'); closeModal();
                 if (S.view==='recurring') viewRecurring(); else rerender();
@@ -1923,7 +1921,7 @@
     async function afterRecurringChange(){ await refreshAccounts(); S.allTx=null; refreshBudgetAlerts(); if (S.view==='recurring') viewRecurring(); else rerender(); }
     function postRecurring(id){
         const r = S.recurring.find(x=>x.id===id); if (!r) return;
-        const m = openModal({title:`Zaksięguj „${esc(r.description||r.subcategoryName)}”`, body:`
+        const m = openModal({title:`Zaksięguj „${esc(r.description||r.subcategoryName||r.categoryName)}”`, body:`
     <p class="muted" style="margin-bottom:14px">Transakcja zostanie dodana na konto <b>${esc(r.accountName)}</b>, a termin przesunie się na kolejny okres.</p>
     <div class="field amount-input"><input class="input num" id="pr-amt" type="number" step="0.01" min="0.01" value="${num(r.amount)}"><span>${esc(r.currency||'')}</span></div>
     <div class="field"><label>Data transakcji</label><input class="input" type="date" id="pr-date" value="${r.nextDate}"></div>`,
@@ -2218,8 +2216,8 @@
         const total = ptx.reduce((s,t)=>s+num(t.amount),0);
         const g = {};
         ptx.forEach(t=>{
-            const raw = (t.description||'').trim();
-            const key = mode==='desc' ? (raw ? raw.toLowerCase().replace(/\s+/g,' ') : '∅'+t.subcategoryName) : `${t.categoryName}/${t.subcategoryName}`;
+            const raw = (t.description||'').trim(), sn = t.subcategoryName||NO_SUB;
+            const key = mode==='desc' ? (raw ? raw.toLowerCase().replace(/\s+/g,' ') : '∅'+sn) : `${t.categoryName}/${sn}`;
             const e = g[key] = g[key] || {sum:0, n:0, names:{}, cats:{}, last:''};
             e.sum += num(t.amount); e.n++;
             const disp = mode==='desc' ? (raw || `${t.subcategoryName} (bez opisu)`) : t.subcategoryName;

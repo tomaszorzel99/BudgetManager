@@ -94,10 +94,24 @@ public class RecurringTransactionService {
         if (request.autoPost() != null) recurring.setAutoPost(request.autoPost());
         if (request.active() != null) recurring.setActive(request.active());
         if (request.accountId() != null) recurring.setAccount(accessibleAccount(request.accountId(), userId));
-        if (request.categoryId() != null || request.subcategoryId() != null) {
-            applyCategory(recurring,
-                    request.categoryId() != null ? request.categoryId() : recurring.getCategory().getId(),
-                    request.subcategoryId() != null ? request.subcategoryId() : recurring.getSubcategory().getId());
+        boolean clearSubcategory = Boolean.TRUE.equals(request.clearSubcategory());
+        if (clearSubcategory && request.subcategoryId() != null) {
+            throw new IllegalArgumentException("Pass either subcategoryId or clearSubcategory, not both");
+        }
+        if (request.categoryId() != null || request.subcategoryId() != null || clearSubcategory) {
+            Long categoryId = request.categoryId() != null ? request.categoryId() : recurring.getCategory().getId();
+            Long subcategoryId;
+            if (clearSubcategory) {
+                subcategoryId = null;
+            } else if (request.subcategoryId() != null) {
+                subcategoryId = request.subcategoryId();
+            } else if (recurring.getSubcategory() != null
+                    && recurring.getSubcategory().getCategory().getId().equals(categoryId)) {
+                subcategoryId = recurring.getSubcategory().getId();
+            } else {
+                subcategoryId = null;
+            }
+            applyCategory(recurring, categoryId, subcategoryId);
         }
         if (recurring.getEndDate() != null && recurring.getEndDate().isBefore(recurring.getNextDate())) {
             throw new IllegalArgumentException("End date must not be before the next payment date");
@@ -198,7 +212,7 @@ public class RecurringTransactionService {
         tx.setDescription(label(recurring));
         tx.setAccountId(recurring.getAccount().getId());
         tx.setCategoryId(recurring.getCategory().getId());
-        tx.setSubcategoryId(recurring.getSubcategory().getId());
+        tx.setSubcategoryId(recurring.getSubcategory() != null ? recurring.getSubcategory().getId() : null);
         transactionService.createTransaction(tx, recurring.getUser().getEmail());
     }
 
@@ -218,13 +232,16 @@ public class RecurringTransactionService {
 
     private void applyCategory(RecurringTransaction recurring, Long categoryId, Long subcategoryId) {
         Category category = categoryRepository.findById(categoryId).orElseThrow(() -> new CategoryException(categoryId));
-        Subcategory subcategory = subcategoryRepository.findById(subcategoryId)
+        Subcategory subcategory = subcategoryId == null ? null : subcategoryRepository.findById(subcategoryId)
                 .orElseThrow(() -> new SubcategoryException(subcategoryId));
-        if (category.getType() != recurring.getType() || !subcategory.getCategory().getId().equals(category.getId())) {
-            throw new IllegalArgumentException("Category, subcategory and transaction type must match");
+        if (category.getType() != recurring.getType()
+                || (subcategory != null && !subcategory.getCategory().getId().equals(category.getId()))) {
+//        if (category.getType() != recurring.getType() || !subcategory.getCategory().getId().equals(category.getId())) {
+//            throw new IllegalArgumentException("Category, subcategory and transaction type must match");
+//        }
+            recurring.setCategory(category);
+            recurring.setSubcategory(subcategory);
         }
-        recurring.setCategory(category);
-        recurring.setSubcategory(subcategory);
     }
 
     private static void requireIncomeOrExpense(CategoryType type) {
@@ -233,9 +250,10 @@ public class RecurringTransactionService {
         }
     }
 
-    private static String label(RecurringTransaction r) {
-        return r.getDescription() != null ? r.getDescription() : r.getSubcategory().getName();
-    }
+        private static String label(RecurringTransaction r) {
+            if (r.getDescription() != null) return r.getDescription();
+            return r.getSubcategory() != null ? r.getSubcategory().getName() : r.getCategory().getName();
+        }
 
     private static String currency(RecurringTransaction r) {
         return r.getAccount().getCurrency() == null ? null : r.getAccount().getCurrency().toUpperCase(Locale.ROOT);
@@ -252,6 +270,7 @@ public class RecurringTransactionService {
                 r.getFrequency(), r.getStartDate(), r.getNextDate(), r.getEndDate(), r.isAutoPost(), r.isActive(),
                 r.getAccount().getId(), r.getAccount().getName(), currency(r),
                 r.getCategory().getId(), r.getCategory().getName(), r.getCategory().getColor(),
-                r.getSubcategory().getId(), r.getSubcategory().getName(), monthly);
+                r.getSubcategory() != null ? r.getSubcategory().getId() : null,
+                r.getSubcategory() != null ? r.getSubcategory().getName() : null, monthly);
     }
 }

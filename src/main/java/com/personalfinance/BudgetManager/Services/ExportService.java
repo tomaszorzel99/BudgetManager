@@ -159,6 +159,10 @@ public class ExportService {
         return t.getType() == CategoryType.EXPENSE ? t.getAmount().negate() : t.getAmount();
     }
 
+    private static String subcategoryName(Transaction t) {
+        return t.getSubcategory() != null ? t.getSubcategory().getName() : null;
+    }
+
     private static String upper(String s) {
         return s == null ? "" : s.toUpperCase(Locale.ROOT);
     }

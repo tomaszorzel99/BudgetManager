@@ -19,5 +19,6 @@ public record UpdateRecurringTransactionRequest(
         Boolean active,
         Long accountId,
         Long categoryId,
-        Long subcategoryId) {
+        Long subcategoryId,
+        Boolean clearSubcategory) {
 }

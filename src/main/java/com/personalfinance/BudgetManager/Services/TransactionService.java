@@ -40,8 +40,7 @@ public class TransactionService {
         Account account = getAccessibleAccount(request.getAccountId(), user.getId());
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new CategoryException(request.getCategoryId()));
-        Subcategory subcategory = subcategoryRepository.findById(request.getSubcategoryId())
-                .orElseThrow(() -> new SubcategoryException(request.getSubcategoryId()));
+        Subcategory subcategory = findSubcategory(request.getSubcategoryId());
         validateCategory(category, subcategory, request.getType());
         if (request.getType() == CategoryType.INITIAL_BALANCE) {
             throw new IllegalArgumentException("Initial balance is created with the account");
@@ -123,9 +122,12 @@ public class TransactionService {
         Category category = request.getCategoryId() == null ? transaction.getCategory()
                 : categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new CategoryException(request.getCategoryId()));
-        Subcategory subcategory = request.getSubcategoryId() == null ? transaction.getSubcategory()
-                : subcategoryRepository.findById(request.getSubcategoryId())
-                .orElseThrow(() -> new SubcategoryException(request.getSubcategoryId()));
+        boolean clearSubcategory = Boolean.TRUE.equals(request.getClearSubcategory());
+        if (clearSubcategory && request.getSubcategoryId() != null) {
+            throw new IllegalArgumentException("Pass either subcategoryId or clearSubcategory, not both");
+        }
+        Subcategory subcategory = resolveSubcategory(transaction.getSubcategory(), category,
+                request.getSubcategoryId(), clearSubcategory);
         if (request.getCategoryId() != null || request.getSubcategoryId() != null) {
             validateCategory(category, subcategory, transaction.getType());
         }
@@ -134,6 +136,8 @@ public class TransactionService {
             applyBalanceChange(account, transaction.getType(), request.getAmount().subtract(transaction.getAmount()));
         }
         updateExistingTransactionWithPatch(transaction, request);
+        transaction.setCategory(category);
+        transaction.setSubcategory(subcategory);
         return transactionRepository.save(transaction);
     }
 
@@ -147,8 +151,31 @@ public class TransactionService {
         return account;
     }
 
+    private Subcategory findSubcategory(Long subcategoryId) {
+        if (subcategoryId == null) {
+            return null;
+        }
+        return subcategoryRepository.findById(subcategoryId)
+                .orElseThrow(() -> new SubcategoryException(subcategoryId));
+    }
+
+    /** Po zmianie kategorii stara podkategoria, która do niej nie pasuje, jest zdejmowana. */
+    private Subcategory resolveSubcategory(Subcategory current, Category category, Long subcategoryId, boolean clear) {
+        if (clear) {
+            return null;
+        }
+        if (subcategoryId != null) {
+            return findSubcategory(subcategoryId);
+        }
+        if (current != null && !current.getCategory().getId().equals(category.getId())) {
+            return null;
+        }
+        return current;
+    }
+
     private void validateCategory(Category category, Subcategory subcategory, CategoryType type) {
-        if (category.getType() != type || !subcategory.getCategory().getId().equals(category.getId())) {
+        if (category.getType() != type
+                || (subcategory != null && !subcategory.getCategory().getId().equals(category.getId()))) {
             throw new IllegalArgumentException("Category, subcategory and transaction type must match");
         }
     }
@@ -168,14 +195,7 @@ public class TransactionService {
         if (request.getAmount() != null) existingTransaction.setAmount(request.getAmount());
         if (request.getDescription() != null) existingTransaction.setDescription(request.getDescription());
         if (request.getTransactionDate() != null) existingTransaction.setTransactionDate(request.getTransactionDate());
-        if (request.getCategoryId() != null) {
-            existingTransaction.setCategory(categoryRepository.findById(request.getCategoryId()).
-                    orElseThrow(() -> new CategoryException(request.getCategoryId())));
-        }
-        if (request.getSubcategoryId() != null) {
-            existingTransaction.setSubcategory(subcategoryRepository.findById(request.getSubcategoryId())
-                    .orElseThrow(() -> new SubcategoryException(request.getSubcategoryId())));
-        }
+
     }
 
 }

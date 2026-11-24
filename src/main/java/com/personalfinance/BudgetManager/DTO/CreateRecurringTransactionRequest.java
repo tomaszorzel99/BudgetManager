@@ -20,5 +20,5 @@ public record CreateRecurringTransactionRequest(
         boolean autoPost,
         @NotNull(message = "Account id cannot be null") Long accountId,
         @NotNull(message = "Category id cannot be null") Long categoryId,
-        @NotNull(message = "Subcategory id cannot be null") Long subcategoryId) {
+        Long subcategoryId) {
 }

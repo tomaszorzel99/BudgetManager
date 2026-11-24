@@ -13,7 +13,7 @@ import java.util.Optional;
 public interface RecurringTransactionRepository extends JpaRepository<RecurringTransaction, Long> {
 
     @Query("SELECT r FROM RecurringTransaction r JOIN FETCH r.account JOIN FETCH r.category " +
-            "JOIN FETCH r.subcategory WHERE r.user.id = :userId ORDER BY r.active DESC, r.nextDate ASC")
+            "LEFT JOIN FETCH r.subcategory WHERE r.user.id = :userId ORDER BY r.active DESC, r.nextDate ASC")
     List<RecurringTransaction> findAllForUser(@Param("userId") Long userId);
 
     Optional<RecurringTransaction> findByIdAndUserId(Long id, Long userId);

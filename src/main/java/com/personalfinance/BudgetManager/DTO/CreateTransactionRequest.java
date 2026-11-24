@@ -30,6 +30,5 @@ public class CreateTransactionRequest {
     @NotNull(message = "Category id cannot be null")
     private Long categoryId;
 
-    @NotNull(message = "Subcategory id cannot be null")
     private Long subcategoryId;
 }
