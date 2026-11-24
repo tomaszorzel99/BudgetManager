@@ -619,11 +619,13 @@
         [/Cannot transfer to the same account/i,'Wybierz dwa różne konta.'],
         [/Future months/i,'Raporty dla przyszłych miesięcy nie są dostępne.'],
         [/Cannot change the currency/i,'Nie można zmienić waluty konta, które ma saldo lub historię.'],
-        [/Token expired/i,'Token zaproszenia wygasł.'],
-        [/Already accepted/i,'To zaproszenie zostało już wykorzystane.'],
-        [/email mismatch/i,'Zaproszenie zostało wysłane na inny adres e-mail.'],
-        [/already belongs/i,'Już należysz do tej grupy.'],
-        [/not a member/i,'Nie należysz do tej grupy.'],
+        [/Token expired|invitation token has expired/i,'Token zaproszenia wygasł.'],
+        [/Already accepted|invitation has already been accepted/i,'To zaproszenie zostało już wykorzystane.'],
+        [/Invitation token is invalid/i,'Nieprawidłowy token zaproszenia.'],
+        [/email mismatch|sent to a different email/i,'Zaproszenie zostało wysłane na inny adres e-mail.'],
+        [/already belongs|already a member/i,'Ta osoba już należy do tej grupy.'],
+        [/Group not found/i,'Nie znaleziono grupy.'],
+        [/not (a )?member/i,'Nie należysz do tej grupy.'],
         [/permission|No access/i,'Brak uprawnień do tej operacji.'],
         [/unexpected error/i,'Wystąpił nieoczekiwany błąd serwera.'],
     ];
@@ -1565,11 +1567,11 @@
         const g = (S.user?.groups||[]).find(x=>x.id===groupId);
         const m = openModal({title:`Zaproś do „${esc(g?.name||'')}”`, body:`
     <div class="field"><label>E-mail osoby zapraszanej</label><input class="input" type="email" id="inv-email" placeholder="osoba@example.com"></div>
-    <div id="inv-out" class="hidden"><div class="field"><label>Token zaproszenia</label><div class="token-box"><span id="inv-token" style="flex:1"></span><button class="icon-btn" id="inv-copy" title="Kopiuj">${icon('copy')}</button></div><span class="hint">Przekaż token zaproszonej osobie. Musi zalogować się na adres podany wyżej.</span></div></div>`,
+    <div id="inv-out" class="hidden"><div class="field"><label>Token zaproszenia</label><div class="token-box"><span id="inv-token" style="flex:1"></span><button class="icon-btn" id="inv-copy" title="Kopiuj">${icon('copy')}</button></div><span class="hint">Przekaż token zaproszonej osobie. Musi zalogować się na adres podany wyżej.</span><span class="hint" id="inv-exp" style="display:block;margin-top:4px"></span></div></div>`,
             footer:`<button class="btn btn-ghost" data-close>Zamknij</button><button class="btn btn-primary" id="inv-go">Wygeneruj zaproszenie</button>`});
         $('#inv-go',m).onclick = e=>withBtn(e.currentTarget, async ()=>{
             const email = $('#inv-email',m).value.trim(); if(!email) return toast('Podaj e-mail','err');
-            try { const t = await api('POST','/api/invitations/invite',{groupId, email}); $('#inv-token',m).textContent = typeof t==='string'?t:JSON.stringify(t); $('#inv-out',m).classList.remove('hidden'); toast('Zaproszenie gotowe'); }
+            try { const inv = await api('POST','/api/invitations/invite',{groupId, email}); if(!inv?.token) throw new Error('Serwer nie zwrócił tokenu zaproszenia'); $('#inv-token',m).textContent = inv.token; $('#inv-exp',m).textContent = inv.expiresAt ? 'Ważny do: '+new Date(inv.expiresAt).toLocaleString('pl-PL',{dateStyle:'short',timeStyle:'short'}) : ''; $('#inv-out',m).classList.remove('hidden'); toast('Zaproszenie gotowe'); }
             catch(err){ toast(err.message,'err'); }
         });
         $('#inv-copy',m).onclick = ()=>navigator.clipboard.writeText($('#inv-token',m).textContent).then(()=>toast('Skopiowano token')).catch(()=>toast('Nie udało się skopiować','err'));
