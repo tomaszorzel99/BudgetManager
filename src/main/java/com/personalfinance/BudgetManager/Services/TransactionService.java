@@ -42,11 +42,15 @@ public class TransactionService {
                 .orElseThrow(() -> new CategoryException(request.getCategoryId()));
         Subcategory subcategory = findSubcategory(request.getSubcategoryId());
         validateCategory(category, subcategory, request.getType());
-        if (request.getType() == CategoryType.INITIAL_BALANCE) {
+        if (request.getType().isOpeningBalance()) {
             throw new IllegalArgumentException("Initial balance is created with the account");
+        }
+        if (account.isLiability() && request.getType() == CategoryType.INCOME) {
+            throw new IllegalArgumentException("Income cannot be booked on a loan account; record a loan payment instead");
         }
         requirePositive(request.getAmount());
         applyBalanceChange(account, request.getType(), request.getAmount());
+
 
         Transaction transaction = new Transaction();
         transaction.setAmount(request.getAmount());
@@ -102,7 +106,7 @@ public class TransactionService {
         Transaction transaction = transactionRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new AccessDeniedException("No access to this transaction"));
 
-        if (transaction.getType() == CategoryType.INITIAL_BALANCE) {
+        if (transaction.getType().isOpeningBalance()) {
             throw new IllegalArgumentException("Initial balance transaction cannot be deleted");
         }
         Account account = getAccessibleAccount(transaction.getAccount().getId(), userId);
@@ -115,7 +119,7 @@ public class TransactionService {
         Long userId = userService.getCurrentUser().getId();
         Transaction transaction = transactionRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new AccessDeniedException("No access to this transaction"));
-        if (transaction.getType() == CategoryType.INITIAL_BALANCE) {
+        if (transaction.getType().isOpeningBalance()) {
             throw new IllegalArgumentException("Initial balance transaction cannot be edited");
         }
         Account account = getAccessibleAccount(transaction.getAccount().getId(), userId);
@@ -186,12 +190,18 @@ public class TransactionService {
         }
     }
 
-    private void applyBalanceChange(Account account, CategoryType type, BigDecimal amount) {
-        BigDecimal delta = type == CategoryType.EXPENSE ? amount.negate() : amount;
-        account.setBalance(account.getBalance().add(delta));
-    }
 
-    private void updateExistingTransactionWithPatch(Transaction existingTransaction, UpdateTransactionRequest request) {
+private void applyBalanceChange(Account account, CategoryType type, BigDecimal amount) {
+    BigDecimal delta = type.signed(amount);
+    BigDecimal after = account.getBalance().add(delta);
+    if (account.isLiability() && after.signum() > 0) {
+        throw new IllegalArgumentException("Loan balance cannot become positive (remaining debt: "
+                + account.getBalance().negate() + ")");
+    }
+    account.setBalance(after);
+}
+
+private void updateExistingTransactionWithPatch(Transaction existingTransaction, UpdateTransactionRequest request) {
         if (request.getAmount() != null) existingTransaction.setAmount(request.getAmount());
         if (request.getDescription() != null) existingTransaction.setDescription(request.getDescription());
         if (request.getTransactionDate() != null) existingTransaction.setTransactionDate(request.getTransactionDate());

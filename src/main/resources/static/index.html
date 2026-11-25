@@ -530,10 +530,12 @@
     const ACC_TYPES = {
         CHECKING:{n:'Rozliczeniowe',i:'bank',c:'b'}, CASH:{n:'Gotówka',i:'cash',c:'g'},
         SAVINGS:{n:'Oszczędności',i:'piggy',c:'a'}, INVESTMENT:{n:'Inwestycje',i:'trend',c:'v'},
+        LOAN:{n:'Kredyty',i:'scale',c:'r'},
     };
     const TX_TYPES = {
         INCOME:{n:'Przychód',c:'g',sign:'+'}, EXPENSE:{n:'Wydatek',c:'r',sign:'−'},
         ADJUSTMENT:{n:'Korekta',c:'v',sign:'+'}, INITIAL_BALANCE:{n:'Saldo początkowe',c:'a',sign:'+'},
+        LIABILITY_OPENING:{n:'Saldo początkowe długu',c:'r',sign:'−'},
     };
     const PALETTE = ['#ff6a3d','#3e7bfa','#14a36b','#8b5cf6','#e8a10b','#ec4899','#06b6d4','#84cc16','#f43f5e','#6366f1','#0ea5e9','#a16207'];
     const CAT_SWATCHES = ['#FF6A3D','#F43F5E','#EC4899','#8B5CF6','#6366F1','#3E7BFA','#0EA5E9','#06B6D4','#14A36B','#84CC16','#E8A10B','#78716C'];
@@ -577,6 +579,9 @@
     function subOptions(subs, selectedId){
         return `<option value="">— ${NO_SUB} —</option>` + subs.map(s=>`<option value="${s.id}" ${String(s.id)===String(selectedId)?'selected':''}>${esc(s.name)}</option>`).join('');
     }
+    const isLoan = a => a?.accountType==='LOAN';
+    /** Konta, z których się płaci i na które się przelewa (bez kredytów). */
+    const spendAccs = () => S.accounts.filter(a=>!isLoan(a));
     function currencies(){ return [...new Set(S.accounts.map(a=>(a.currency||'PLN').toUpperCase()))]; }
     function pickMainCurrency(){
         const cs = currencies(); if(!cs.length) return 'PLN';
@@ -585,7 +590,7 @@
         return cs.sort((a,b)=>totals[b]-totals[a])[0];
     }
     const inCur = (list, cur=S.currency) => list.filter(t => accCur(t.accountId) === cur || (!accById(t.accountId) && cur===S.currency));
-    const signed = t => t.type==='EXPENSE' ? -num(t.amount) : num(t.amount);
+    const signed = t => TX_TYPES[t.type]?.sign==='−' ? -num(t.amount) : num(t.amount);
 
     /* =========================================================
        API
@@ -721,7 +726,7 @@
         const old = token; token = null; store.sset('bm_token', null);
         if (old && !expired) fetch(API+'/api/auth/logout',{method:'POST',headers:{Authorization:'Bearer '+old}}).catch(()=>{});
         destroyCharts(); closeAllModals();
-        Object.assign(S,{user:null,accounts:[],archived:[],categories:[],subcategories:[],allTx:null});
+        Object.assign(S,{user:null,accounts:[],archived:[],categories:[],subcategories:[],allTx:null,loans:null});
         showAuth('login');
         if (expired && !silent) toast('Sesja wygasła. Zaloguj się ponownie.','err');
     }
@@ -738,6 +743,7 @@
         {id:'budgets', n:'Budżety', i:'target'},
         {id:'recurring', n:'Płatności cykliczne', i:'repeat'},
         {id:'goals', n:'Cele oszczędnościowe', i:'flag'},
+        {id:'loans', n:'Kredyty', i:'scale'},
         {id:'reports', n:'Raporty', i:'chart'},
         {sep:'Ustawienia'},
         {id:'categories', n:'Kategorie', i:'tag'},
@@ -788,7 +794,7 @@
         window.scrollTo(0,0);
         ({dashboard:viewDashboard, transactions:viewTransactions, transfers:viewTransfers, accounts:viewAccounts,
             reports:viewReports, categories:viewCategories, groups:viewGroups, profile:viewProfile,
-            budgets:viewBudgets, recurring:viewRecurring, goals:viewGoals})[view]();
+            budgets:viewBudgets, recurring:viewRecurring, goals:viewGoals, loans:viewLoans})[view]();
     }
     function rerender(){ if (S.user) go(S.view); }
     async function refreshAccounts(){ S.accounts = await api('GET','/api/accounts') || []; if(!currencies().includes(S.currency)) S.currency = pickMainCurrency(); }
@@ -878,7 +884,8 @@
         const txs = inCur(allTx);
         const accs = S.accounts.filter(a=>(a.currency||'').toUpperCase()===S.currency);
         const net = accs.reduce((s,a)=>s+num(a.balance),0);
-        const avail = accs.filter(a=>a.availableForSpending).reduce((s,a)=>s+num(a.balance),0);
+        const avail = accs.filter(a=>a.availableForSpending && !isLoan(a)).reduce((s,a)=>s+num(a.balance),0);
+        const liabs = accs.filter(isLoan).reduce((s,a)=>s+num(a.balance),0), assets = net - liabs;
         const sumM = (ym,type)=>txs.filter(t=>t.type===type && ymKey(t.transactionDate)===`${ym.y}-${ym.m}`).reduce((s,t)=>s+num(t.amount),0);
         const inc = sumM(cur,'INCOME'), exp = sumM(cur,'EXPENSE'), incP = sumM(prev,'INCOME'), expP = sumM(prev,'EXPENSE');
         const delta = (a,b,good) => { if(!b) return `<span class="faint">brak danych z ${MONTHS_GEN[prev.m-1].replace(/a$/,'a')}</span>`;
@@ -904,8 +911,8 @@
   ${exceeded.length?`<div class="alert r">${icon('alert')}<div class="grow"><b>Przekroczono ${exceeded.length===1?'budżet':'budżety'}:</b> ${exceeded.map(b=>`${esc(b.categoryName)} (o ${fmtMoney(-num(b.remaining),b.currency)})`).join(', ')}</div><a class="card-link" data-go="budgets" href="#budgets">Budżety ${icon('right')}</a></div>`:''}
   ${overdueN?`<div class="alert a">${icon('repeat')}<div class="grow"><b>${overdueN} ${overdueN===1?'płatność cykliczna czeka':'płatności cykliczne czekają'} na zaksięgowanie.</b></div><a class="card-link" data-go="recurring" href="#recurring">Przejdź ${icon('right')}</a></div>`:''}
   <div class="grid g-4 mb">
-    <div class="card kpi"><div class="lbl"><span class="ico o">${icon('wallet')}</span>Wartość netto</div><div class="val num">${fmtMoney(net)}</div><div class="delta">${accs.length} ${accs.length===1?'konto':'kont'} w ${S.currency}</div></div>
-    <div class="card kpi"><div class="lbl"><span class="ico b">${icon('cash')}</span>Dostępne do wydania</div><div class="val num">${fmtMoney(avail)}</div><div class="delta">${net?Math.round(avail/net*100):0}% wartości netto</div></div>
+    <div class="card kpi"><div class="lbl"><span class="ico o">${icon('wallet')}</span>Wartość netto</div><div class="val num">${fmtMoney(net)}</div><div class="delta">${liabs ? `aktywa ${fmtMoney(assets,null,{compact:true})} · kredyty ${fmtMoney(liabs,null,{compact:true})}` : `${accs.length} ${accs.length===1?'konto':'kont'} w ${S.currency}`}</div></div>
+    <div class="card kpi"><div class="lbl"><span class="ico b">${icon('cash')}</span>Dostępne do wydania</div><div class="val num">${fmtMoney(avail)}</div><div class="delta">${assets>0?Math.round(avail/assets*100):0}% aktywów</div></div>
     <div class="card kpi"><div class="lbl"><span class="ico g">${icon('up')}</span>Przychody · ${MONTHS[cur.m-1].toLowerCase()}</div><div class="val num pos">${fmtMoney(inc)}</div><div class="delta">${delta(inc,incP,'up')}</div></div>
     <div class="card kpi"><div class="lbl"><span class="ico r">${icon('down')}</span>Wydatki · ${MONTHS[cur.m-1].toLowerCase()}</div><div class="val num neg">${fmtMoney(exp)}</div><div class="delta">${delta(exp,expP,'down')}</div></div>
   </div>
@@ -980,7 +987,7 @@
         const acc = accById(t.accountId);
         return `<div class="li hov"><span class="cat-ico" style="background:${hexA(col,.14)};color:${col}">${esc(initials(t.categoryName).slice(0,1))}</span>
     <div class="main-t"><div class="t1">${esc(t.description || t.subcategoryName || t.categoryName)}</div><div class="t2">${esc(t.categoryName)}${t.subcategoryName?' · '+esc(t.subcategoryName):''} · ${fmtDate(t.transactionDate)}</div></div>
-    <div class="amt num ${t.type==='EXPENSE'?'':'pos'}">${t.type==='EXPENSE'?'−':'+'}${fmtMoney(t.amount, acc?.currency)}</div></div>`;
+    <div class="amt num ${signed(t)<0?'':'pos'}">${signed(t)<0?'−':'+'}${fmtMoney(t.amount, acc?.currency)}</div></div>`;
     }
 
     /* =========================================================
@@ -1051,7 +1058,7 @@
           <div class="faint" style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.type!=='INCOME'&&t.type!=='EXPENSE'?`<span class="chip ${tt.c}" style="padding:0 6px;font-size:11px">${tt.n}</span> `:''}${esc(t.userName||'')}</div></div></div>
         <div class="c-cat"><span class="pill"><span class="dot" style="background:${col}"></span>${esc(t.categoryName)}${t.subcategoryName?` <span class="faint">/ ${esc(t.subcategoryName)}</span>`:''}</span></div>
         <div class="c-acc muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.accountName)}</div>
-        <div class="num" style="text-align:right;font-weight:600"><span class="${t.type==='EXPENSE'?'':'pos'}">${t.type==='EXPENSE'?'−':'+'}${fmtMoney(t.amount,cu)}</span></div>
+        <div class="num" style="text-align:right;font-weight:600"><span class="${signed(t)<0?'':'pos'}">${signed(t)<0?'−':'+'}${fmtMoney(t.amount,cu)}</span></div>
         <div class="acts">${locked?'':`${t.type==='INCOME'||t.type==='EXPENSE'?`<button class="icon-btn" title="Ustaw jako cykliczną" onclick="recurringFromTx(${t.id})">${icon('repeat')}</button>`:''}<button class="icon-btn" title="Edytuj" onclick="txModal(${t.id})">${icon('edit')}</button><button class="icon-btn danger" title="Usuń" onclick="deleteTx(${t.id})">${icon('trash')}</button>`}</div>
       </div>`; }).join('');
         }).join('');
@@ -1063,7 +1070,7 @@
         if (!S.accounts.length){ toast('Najpierw utwórz konto','err'); return accountModal(); }
         const hasAdj = S.categories.some(c=>c.type==='ADJUSTMENT');
         let type = editing ? editing.type : 'EXPENSE';
-        const accOpts = S.accounts.map(a=>`<option value="${a.id}" ${editing&&String(editing.accountId)===String(a.id)?'selected':''}>${esc(a.name)} · ${fmtMoney(a.balance,a.currency)}</option>`).join('');
+        const accOpts = spendAccs().map(a=>`<option value="${a.id}" ${editing&&String(editing.accountId)===String(a.id)?'selected':''}>${esc(a.name)} · ${fmtMoney(a.balance,a.currency)}</option>`).join('');
         const m = openModal({title: editing?'Edytuj transakcję':'Nowa transakcja', body:`
     <div class="seg" id="tx-type" style="margin-bottom:16px">
       <button type="button" data-k="EXPENSE" class="exp">Wydatek</button><button type="button" data-k="INCOME" class="inc">Przychód</button>${hasAdj?'<button type="button" data-k="ADJUSTMENT" class="adj">Korekta</button>':''}
@@ -1164,12 +1171,12 @@
     </div>`; }).join('')}</div>`;
     }
     function transferModal(id){
-        if (S.accounts.length<2){ toast('Do przelewu potrzebujesz dwóch kont','err'); return; }
+        if (spendAccs().length<2){ toast('Do przelewu potrzebujesz dwóch kont','err'); return; }
         const ed = id ? trRows.find(t=>t.id===id) : null;
-        const opts = sel => S.accounts.map(a=>`<option value="${a.id}" ${String(sel)===String(a.id)?'selected':''}>${esc(a.name)} · ${fmtMoney(a.balance,a.currency)}</option>`).join('');
+        const opts = sel => spendAccs().map(a=>`<option value="${a.id}" ${String(sel)===String(a.id)?'selected':''}>${esc(a.name)} · ${fmtMoney(a.balance,a.currency)}</option>`).join('');
         const m = openModal({title: ed?'Edytuj przelew':'Nowy przelew', body:`
-    <div class="field"><label>Z konta</label><select class="input" id="tr-from">${opts(ed?ed.fromAccountId:S.accounts[0].id)}</select></div>
-    <div class="field"><label>Na konto</label><select class="input" id="tr-to">${opts(ed?ed.toAccountId:S.accounts[1].id)}</select></div>
+    <div class="field"><label>Z konta</label><select class="input" id="tr-from">${opts(ed?ed.fromAccountId:spendAccs()[0].id)}</select></div>
+    <div class="field"><label>Na konto</label><select class="input" id="tr-to">${opts(ed?ed.toAccountId:spendAccs()[1].id)}</select></div>
     <div class="field amount-input"><input class="input num" type="number" step="0.01" min="0.01" id="tr-amount" placeholder="0,00" value="${ed?num(ed.amount):''}"><span id="tr-cur"></span></div>
     <div class="field hidden" id="tr-rate-f"><label id="tr-rate-l">Kurs wymiany</label><input class="input num" type="number" step="0.000001" min="0" id="tr-rate" value="${ed&&ed.exchangeRate?num(ed.exchangeRate):''}"></div>
     <div class="fx-preview hidden" id="tr-prev"></div>
@@ -1224,10 +1231,16 @@
         }
         const byCurType = {};
         S.accounts.forEach(a=>{ const cu=(a.currency||'').toUpperCase(); if(cu!==S.currency) return; byCurType[a.accountType]=(byCurType[a.accountType]||0)+num(a.balance); });
-        const total = Object.values(byCurType).reduce((a,b)=>a+b,0);
-        let html = `<div class="grid g-4 mb">${Object.entries(ACC_TYPES).map(([k,t])=>`
+        const total = Object.entries(byCurType).filter(([k])=>k!=='LOAN').reduce((a,[,b])=>a+b,0);
+        const debt = byCurType.LOAN || 0;
+        let html = `<div class="grid g-4 mb">${Object.entries(ACC_TYPES).filter(([k])=>k!=='LOAN').map(([k,t])=>`
     <div class="card kpi"><div class="lbl"><span class="ico ${t.c}">${icon(t.i)}</span>${t.n}</div><div class="val num">${fmtMoney(byCurType[k]||0)}</div>
-    <div class="delta">${total?Math.round((byCurType[k]||0)/total*100):0}% całości</div></div>`).join('')}</div>`;
+    <div class="delta">${total?Math.round((byCurType[k]||0)/total*100):0}% aktywów</div></div>`).join('')}</div>`;
+        if (debt) html += `<div class="card card-b mb" style="display:flex;gap:24px;flex-wrap:wrap;align-items:center">
+      <div><div class="faint">Aktywa</div><b class="num" style="font-size:18px">${fmtMoney(total)}</b></div>
+      <div><div class="faint">Kredyty</div><b class="num neg" style="font-size:18px">${fmtMoney(debt)}</b></div>
+      <div><div class="faint">Wartość netto</div><b class="num" style="font-size:18px">${fmtMoney(total+debt)}</b></div>
+      <a class="card-link" data-go="loans" href="#loans" style="margin-left:auto">Szczegóły kredytów ${icon('right')}</a></div>`;
         const byType = {};
         S.accounts.forEach(a=>(byType[a.accountType]=byType[a.accountType]||[]).push(a));
         html += Object.keys(ACC_TYPES).filter(k=>byType[k]).map(k=>{
@@ -1249,16 +1262,22 @@
       <div class="faint" style="font-size:12.5px">${esc(a.groupName||'')} · ${esc((a.currency||'').toUpperCase())}${a.updatedAt?' · zaktualizowano '+fmtDate(a.updatedAt):''}</div></div>
     <div class="avatars" title="${esc(users.join(', '))}">${users.slice(0,4).map(u=>`<span class="avatar sm" style="background:${avatarColor(u)}">${esc(initials(u))}</span>`).join('')}</div>
     <b class="num" style="min-width:120px;text-align:right;font-size:15px">${fmtMoney(a.balance,a.currency)}</b>
-    <div class="acts"><button class="icon-btn" title="Historia salda" onclick="accountHistoryModal(${a.id})">${icon('history')}</button><button class="icon-btn" title="Edytuj" onclick="accountModal(${a.id})">${icon('edit')}</button><button class="icon-btn" title="Korekta salda" onclick="adjustModal(${a.id})">${icon('scale')}</button><button class="icon-btn" title="Archiwizuj" onclick="archiveAccount(${a.id})">${icon('archive')}</button><button class="icon-btn danger" title="Usuń" onclick="deleteAccount(${a.id})">${icon('trash')}</button></div>
+    <div class="acts"><button class="icon-btn" title="Historia salda" onclick="accountHistoryModal(${a.id})">${icon('history')}</button><button class="icon-btn" title="Edytuj" onclick="accountModal(${a.id})">${icon('edit')}</button>${isLoan(a)?'':`<button class="icon-btn" title="Korekta salda" onclick="adjustModal(${a.id})">${icon('scale')}</button>`}<button class="icon-btn" title="Archiwizuj" onclick="archiveAccount(${a.id})">${icon('archive')}</button><button class="icon-btn danger" title="Usuń" onclick="deleteAccount(${a.id})">${icon('trash')}</button></div>
   </div>`;
+    }
+    async function editLoanOfAccount(accountId){
+        if (!S.loans) { try { S.loans = await api('GET','/api/loans') || []; } catch(err){ return toast(err.message,'err'); } }
+        const l = S.loans.find(x=>x.accountId===accountId);
+        l ? loanModal(l.id) : go('loans');
     }
     function accountModal(id){
         const ed = id ? accById(id) : null;
+        if (isLoan(ed)) return editLoanOfAccount(ed.id);
         const groups = S.user?.groups||[];
         if (!ed && !groups.length){ toast('Najpierw utwórz grupę','err'); return groupModal(); }
         const m = openModal({title: ed?'Edytuj konto':'Nowe konto', body:`
     <div class="field"><label>Nazwa konta</label><input class="input" id="ac-name" value="${esc(ed?.name||'')}" placeholder="np. mBank osobiste"></div>
-    <div class="field"><label>Typ</label><div class="seg" id="ac-type">${Object.entries(ACC_TYPES).map(([k,t])=>`<button type="button" data-k="${k}">${t.n}</button>`).join('')}</div></div>
+    <div class="field"><label>Typ</label><div class="seg" id="ac-type">${Object.entries(ACC_TYPES).filter(([k])=>k!=='LOAN').map(([k,t])=>`<button type="button" data-k="${k}">${t.n}</button>`).join('')}</div></div>
     ${ed?'':`<div class="row">
       <div class="field"><label>Saldo początkowe</label><input class="input num" type="number" min="0" step="0.01" id="ac-bal" placeholder="0,00"></div>
       <div class="field"><label>Waluta</label><input class="input" id="ac-cur" value="PLN" maxlength="3" style="text-transform:uppercase" list="cur-list"><datalist id="cur-list"><option>PLN</option><option>EUR</option><option>USD</option><option>GBP</option><option>CHF</option></datalist></div>
@@ -1870,7 +1889,7 @@
     function recurringModal(id, preset){
         const ed = id ? S.recurring.find(r=>r.id===id) : null;
         if (id && !ed){ api('GET','/api/recurring').then(l=>{ S.recurring=l||[]; if (S.recurring.some(r=>r.id===id)) recurringModal(id); }).catch(e=>toast(e.message,'err')); return; }
-        const accs = S.accounts; if (!accs.length){ toast('Najpierw utwórz konto','err'); return accountModal(); }
+        const accs = spendAccs(); if (!accs.length){ toast('Najpierw utwórz konto','err'); return accountModal(); }
         const p = ed || preset || {};
         let type = p.type || 'EXPENSE';
         const nextMonth = d=>{ const x=parseDate(d)||new Date(); const n=new Date(x.getFullYear(), x.getMonth()+1, 1); n.setDate(Math.min(x.getDate(), new Date(n.getFullYear(), n.getMonth()+1, 0).getDate())); return isoLocal(n); };
@@ -1998,7 +2017,7 @@
     <div class="field"><label>Postęp liczę na podstawie</label><div class="seg" id="go-src"><button data-k="manual">Ręcznych wpłat</button><button data-k="acc">Salda konta</button></div></div>
     <div id="go-manual"><div class="row">${ed?'':`<div class="field"><label>Już odłożone</label><input class="input num" type="number" min="0" step="0.01" id="go-init" placeholder="0"></div>`}
       <div class="field"><label>Waluta</label><select class="input" id="go-cur" ${ed&&!ed.accountId?'disabled':''}>${cs.map(c=>`<option ${c===(ed?.currency||S.currency)?'selected':''}>${c}</option>`).join('')}</select></div></div></div>
-    <div id="go-acc" class="field"><label>Konto</label><select class="input" id="go-account">${S.accounts.map(a=>`<option value="${a.id}" ${a.id===ed?.accountId?'selected':''}>${esc(a.name)} · ${fmtMoney(a.balance,a.currency)}</option>`).join('')}</select><span class="hint">Postęp = aktualne saldo konta, np. konta oszczędnościowego przeznaczonego na ten cel.</span></div>
+    <div id="go-acc" class="field"><label>Konto</label><select class="input" id="go-account">${spendAccs().map(a=>`<option value="${a.id}" ${a.id===ed?.accountId?'selected':''}>${esc(a.name)} · ${fmtMoney(a.balance,a.currency)}</option>`).join('')}</select><span class="hint">Postęp = aktualne saldo konta, np. konta oszczędnościowego przeznaczonego na ten cel.</span></div>
     <div class="field"><label>Kolor</label><div class="colors" id="go-colors">${CAT_SWATCHES.map(s=>`<button type="button" data-c="${s}" style="background:${s}"></button>`).join('')}</div></div>`,
             footer:`<button class="btn btn-ghost" data-close>Anuluj</button><button class="btn btn-primary" id="go-save">${ed?'Zapisz':'Utwórz cel'}</button>`});
         const upd = ()=>{ $$('#go-src button',m).forEach(b=>b.classList.toggle('on',b.dataset.k===src)); $('#go-manual',m).classList.toggle('hidden',src!=='manual'); $('#go-acc',m).classList.toggle('hidden',src!=='acc');
@@ -2033,6 +2052,123 @@
         try { await api('DELETE','/api/goals/'+id); toast('Cel usunięty'); viewGoals(); } catch(err){ toast(err.message,'err'); }
     }
 
+    /* =========================================================
+   LOANS (kredyty)
+   ========================================================= */
+    const INST_N = {DECREASING:'Malejące', ANNUITY:'Równe'};
+    const STRAT_N = {SHORTEN_TERM:'Skrócenie okresu', REDUCE_INSTALLMENT:'Niższa rata'};
+    async function viewLoans(){
+        setHeader('Kredyty', 'Zadłużenie, postęp spłaty i najbliższe raty', `<button class="btn btn-primary" id="l-add">${icon('plus')}Nowy kredyt</button>`);
+        $('#l-add').onclick = ()=>loanModal();
+        const c = $('#content'); c.innerHTML = skeleton(3);
+        try { S.loans = await api('GET','/api/loans') || []; } catch(err){ toast(err.message,'err'); S.loans = S.loans || []; }
+        if (S.view!=='loans') return;
+        const loans = S.loans;
+        if (!loans.length){
+            c.innerHTML = `<div class="card">${emptyState('scale','Nie masz jeszcze kredytów','Dodaj kredyt, aby widzieć dług w wartości netto i śledzić postęp spłaty.',`<button class="btn btn-primary" onclick="loanModal()">${icon('plus')}Dodaj kredyt</button>`)}</div>`;
+            return;
+        }
+        const byCur = {};
+        loans.forEach(l=>{ const e = byCur[l.currency] = byCur[l.currency] || {out:0, rep:0}; e.out += num(l.outstandingPrincipal); e.rep += num(l.repaidPrincipal); });
+        const sumTxt = k => Object.entries(byCur).map(([cu,e])=>fmtMoney(e[k],cu)).join(' · ');
+        const next = loans.filter(l=>l.nextPaymentDate).sort((a,b)=>String(a.nextPaymentDate).localeCompare(String(b.nextPaymentDate)))[0];
+        const n = loans.length;
+        c.innerHTML = `<div class="grid g-3 mb">
+      <div class="card kpi"><div class="lbl"><span class="ico r">${icon('scale')}</span>Pozostało do spłaty</div><div class="val num">${sumTxt('out')}</div><div class="delta">${n} ${n===1?'kredyt':(n<5?'kredyty':'kredytów')}</div></div>
+      <div class="card kpi"><div class="lbl"><span class="ico g">${icon('check')}</span>Spłacony kapitał</div><div class="val num pos">${sumTxt('rep')}</div><div class="delta">od uruchomienia kredytów</div></div>
+      <div class="card kpi"><div class="lbl"><span class="ico a">${icon('calendar')}</span>Najbliższa rata</div><div class="val">${next?fmtDate(next.nextPaymentDate):'—'}</div><div class="delta">${next?esc(next.name):'brak'}</div></div>
+    </div>
+    ${loans.map(loanCard).join('')}
+    <div class="note">Zapisywanie rat i nadpłat z podziałem na kapitał i odsetki dojdzie w kolejnym etapie. Spłacony kredyt (saldo 0) zarchiwizujesz w zakładce Konta.</div>`;
+    }
+    function loanCard(l){
+        const p = Math.min(num(l.percentRepaid), 100);
+        const info = [
+            ['Oprocentowanie', `${num(l.annualInterestRate).toLocaleString('pl-PL',{maximumFractionDigits:4})}% · ${l.rateType==='VARIABLE'?'zmienne':'stałe'}`],
+            ['Raty', (INST_N[l.installmentType]||l.installmentType).toLowerCase() + `, ${l.paymentDay}. dnia miesiąca`],
+            ['Najbliższa rata', l.nextPaymentDate ? fmtDate(l.nextPaymentDate) : 'kredyt spłacony'],
+            ['Koniec według umowy', fmtDate(l.plannedEndDate)],
+            ['Po nadpłacie domyślnie', (STRAT_N[l.overpaymentStrategy]||l.overpaymentStrategy).toLowerCase()],
+            ['Konto spłaty', l.defaultPaymentAccountName ? esc(l.defaultPaymentAccountName) : '—'],
+        ];
+        return `<div class="card mb"><div class="card-h"><h3>${esc(l.name)}</h3><span class="faint">${esc([l.lender, l.groupName].filter(Boolean).join(' · '))}</span></div>
+    <div class="card-b">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+        <div><span class="faint">Pozostało</span> <b class="num" style="font-size:20px">${fmtMoney(l.outstandingPrincipal,l.currency)}</b> <span class="faint">z ${fmtMoney(l.originalPrincipal,l.currency)}</span></div>
+        <span class="chip g">spłacono ${num(l.percentRepaid).toLocaleString('pl-PL')}%</span>
+      </div>
+      <div class="pbar"><span style="width:${p}%;background:var(--green)"></span></div>
+      <div class="legend" style="margin-top:16px">${info.map(([k,v])=>`<div class="legend-i"><span class="n muted">${k}</span><b>${v}</b></div>`).join('')}</div>
+      <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="accountHistoryModal(${l.accountId})">${icon('history')}Historia salda</button>
+        <button class="btn btn-ghost btn-sm" onclick="loanModal(${l.id})">${icon('edit')}Ustawienia</button>
+      </div>
+    </div></div>`;
+    }
+    function loanModal(id){
+        const ed = id ? (S.loans||[]).find(l=>l.id===id) : null;
+        const groups = S.user?.groups||[];
+        if (!ed && !groups.length){ toast('Najpierw utwórz grupę','err'); return groupModal(); }
+        const seg = (sid, map, val) => `<div class="seg" id="${sid}">${Object.entries(map).map(([k,n])=>`<button type="button" data-k="${k}" class="${k===val?'on':''}">${n}</button>`).join('')}</div>`;
+        const payOpts = sel => `<option value="">— nie wybrano —</option>` + spendAccs().map(a=>`<option value="${a.id}" ${String(sel)===String(a.id)?'selected':''}>${esc(a.name)} · ${esc((a.currency||'').toUpperCase())}</option>`).join('');
+        const m = openModal({title: ed?'Ustawienia kredytu':'Nowy kredyt', wide:true, body:`
+    <div class="row">
+      <div class="field"><label>Nazwa</label><input class="input" id="ln-name" maxlength="100" value="${esc(ed?.name||'')}" placeholder="np. Hipoteka"></div>
+      <div class="field"><label>Bank</label><input class="input" id="ln-lender" maxlength="100" value="${esc(ed?.lender||'')}" placeholder="opcjonalnie"></div>
+    </div>
+    ${ed?'':`<div class="row">
+      <div class="field"><label>Kwota kredytu z umowy</label><input class="input num" type="number" min="0.01" step="0.01" id="ln-orig" placeholder="0,00"></div>
+      <div class="field"><label>Data uruchomienia</label><input class="input" type="date" id="ln-start" max="${isoLocal()}"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Pozostało do spłaty (kapitał)</label><input class="input num" type="number" min="0.01" step="0.01" id="ln-out" placeholder="0,00"><span class="hint">Z wyciągu albo z aplikacji banku.</span></div>
+      <div class="field"><label>Stan na dzień</label><input class="input" type="date" id="ln-bdate" value="${isoLocal()}" max="${isoLocal()}"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Waluta</label><input class="input" id="ln-cur" value="PLN" maxlength="3" style="text-transform:uppercase"></div>
+      <div class="field"><label>Grupa</label><select class="input" id="ln-group">${groups.map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join('')}</select></div>
+    </div>
+    <div class="field"><label>Rodzaj rat</label>${seg('ln-inst', INST_N, 'DECREASING')}</div>`}
+    <div class="row">
+      <div class="field"><label>Okres kredytu (miesiące)</label><input class="input num" type="number" min="1" max="600" step="1" id="ln-term" value="${ed?ed.termMonths:''}" placeholder="np. 360"></div>
+      <div class="field"><label>Oprocentowanie roczne (%)</label><input class="input num" type="number" min="0" max="100" step="0.0001" id="ln-rate" value="${ed?num(ed.annualInterestRate):''}" placeholder="np. 7,2"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Dzień płatności raty</label><input class="input num" type="number" min="1" max="31" step="1" id="ln-day" value="${ed?ed.paymentDay:''}" placeholder="1–31"></div>
+      <div class="field"><label>Konto spłaty</label><select class="input" id="ln-pay">${payOpts(ed?.defaultPaymentAccountId)}</select></div>
+    </div>
+    <div class="field"><label>Oprocentowanie</label>${seg('ln-rtype', {FIXED:'Stałe', VARIABLE:'Zmienne'}, ed?.rateType||'FIXED')}</div>
+    <div class="field"><label>Po nadpłacie domyślnie</label>${seg('ln-strat', STRAT_N, ed?.overpaymentStrategy||'SHORTEN_TERM')}<span class="hint">Przy każdej nadpłacie wybierzesz to jeszcze raz.</span></div>`,
+            footer:`<button class="btn btn-ghost" data-close>Anuluj</button><button class="btn btn-primary" id="ln-save">${ed?'Zapisz zmiany':'Dodaj kredyt'}</button>`});
+        $$('.seg', m).forEach(s=>$$('button', s).forEach(b=>b.onclick=()=>$$('button', s).forEach(x=>x.classList.toggle('on', x===b))));
+        const segVal = sid => $(`#${sid} button.on`, m)?.dataset.k;
+        const val = sid => $('#'+sid, m).value.trim().replace(',', '.');
+        $('#ln-save',m).onclick = e=>withBtn(e.currentTarget, async ()=>{
+            const name = val('ln-name'); if (!name) return toast('Podaj nazwę kredytu','err');
+            const termMonths = parseInt(val('ln-term'),10), rate = val('ln-rate'), paymentDay = parseInt(val('ln-day'),10);
+            if (!(termMonths>=1 && termMonths<=600)) return toast('Okres kredytu to od 1 do 600 miesięcy','err');
+            if (rate==='' || !(num(rate)>=0 && num(rate)<=100)) return toast('Podaj oprocentowanie w procentach, np. 7,2','err');
+            if (!(paymentDay>=1 && paymentDay<=31)) return toast('Dzień płatności to liczba od 1 do 31','err');
+            const pay = $('#ln-pay',m).value;
+            const common = {name, lender:val('ln-lender'), termMonths, annualInterestRate:+(+rate).toFixed(4), rateType:segVal('ln-rtype'), paymentDay, overpaymentStrategy:segVal('ln-strat')};
+            try {
+                if (ed) {
+                    await api('PATCH','/api/loans/'+ed.id, {...common, ...(pay ? {defaultPaymentAccountId:+pay} : {clearDefaultPaymentAccount:true})});
+                } else {
+                    const orig = num(val('ln-orig')), out = num(val('ln-out')), currency = val('ln-cur').toUpperCase() || 'PLN';
+                    if (!(orig>0)) return toast('Podaj kwotę kredytu z umowy','err');
+                    if (!(out>0)) return toast('Podaj, ile kapitału zostało do spłaty','err');
+                    if (!val('ln-start')) return toast('Podaj datę uruchomienia kredytu','err');
+                    if (!/^[A-Z]{3}$/.test(currency)) return toast('Waluta to trzyliterowy kod, np. PLN','err');
+                    await api('POST','/api/loans', {...common, lender:common.lender||undefined, currency, groupId:+$('#ln-group',m).value,
+                        originalPrincipal:+orig.toFixed(2), outstandingPrincipal:+out.toFixed(2), startDate:val('ln-start'),
+                        balanceDate:val('ln-bdate')||isoLocal(), installmentType:segVal('ln-inst'), defaultPaymentAccountId:pay?+pay:undefined});
+                }
+                toast(ed?'Kredyt zaktualizowany':'Kredyt dodany'); closeModal(); S.loans = null; await refreshAccounts();
+                if (S.view==='loans') viewLoans(); else rerender();
+            } catch(err){ toast(err.message,'err'); }
+        });
+    }
     /* =========================================================
        ACCOUNT HISTORY (running balance)
        ========================================================= */

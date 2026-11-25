@@ -28,7 +28,8 @@ public class ExportService {
             CategoryType.INCOME, "Przychód",
             CategoryType.EXPENSE, "Wydatek",
             CategoryType.ADJUSTMENT, "Korekta",
-            CategoryType.INITIAL_BALANCE, "Saldo początkowe");
+            CategoryType.INITIAL_BALANCE, "Saldo początkowe",
+            CategoryType.LIABILITY_OPENING, "Saldo początkowe długu");
 
     private final TransactionRepository transactionRepository;
     private final TransferRepository transferRepository;
@@ -155,13 +156,14 @@ public class ExportService {
         }
     }
 
+
     private static BigDecimal signed(Transaction t) {
         return t.getType() == CategoryType.EXPENSE ? t.getAmount().negate() : t.getAmount();
     }
 
     private static String subcategoryName(Transaction t) {
-        return t.getSubcategory() != null ? t.getSubcategory().getName() : null;
-    }
+            return t.getSubcategory() != null ? t.getSubcategory().getName() : null;
+        }
 
     private static String upper(String s) {
         return s == null ? "" : s.toUpperCase(Locale.ROOT);

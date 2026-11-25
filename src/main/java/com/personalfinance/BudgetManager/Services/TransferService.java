@@ -48,6 +48,7 @@ public class TransferService {
                 .orElseThrow(() -> new AccountException(request.getToAccountId()));
 
         validateUserOwnsAccount(user, fromAccount, toAccount);
+        rejectLoanAccounts(fromAccount, toAccount);
 
 //        accountBalanceService.transfer(
 //                request.getFromAccountId(),
@@ -115,8 +116,11 @@ public class TransferService {
         Account toAccount = accountRepository.findById(request.getToAccountId())
                 .orElseThrow(() -> new AccountException(request.getToAccountId()));
         validateUserOwnsAccount(user, fromAccount, toAccount);
+        rejectLoanAccounts(transfer.getFromAccount(), transfer.getToAccount());
+        rejectLoanAccounts(fromAccount, toAccount);
         BigDecimal rate = resolveRate(request, fromAccount, toAccount);
         BigDecimal received = receivedAmount(request.getAmount(), rate);
+
 
         accountBalanceService.replaceTransfer(transfer, fromAccount.getId(), toAccount.getId(),
                 request.getAmount(), received);
@@ -135,7 +139,10 @@ public class TransferService {
     public void deleteTransfer(Long transferId, String userEmail) {
 
 //        Transfer transfer = getTransferById(transferId, userEmail);
+
+//        Transfer transfer = getTransferById(transferId, userEmail);
         Transfer transfer = getTransferForWrite(transferId, userEmail);
+        rejectLoanAccounts(transfer.getFromAccount(), transfer.getToAccount());
         accountBalanceService.transfer(
                 transfer.getToAccount().getId(),
                 transfer.getFromAccount().getId(),
@@ -150,6 +157,12 @@ public class TransferService {
         }
         if (request.getFromAccountId().equals(request.getToAccountId())) {
             throw new IllegalArgumentException("Cannot transfer to the same account");
+        }
+    }
+
+    private void rejectLoanAccounts(Account fromAccount, Account toAccount) {
+        if (fromAccount.isLiability() || toAccount.isLiability()) {
+            throw new IllegalArgumentException("Loan repayments are recorded in the Loans section, not as transfers");
         }
     }
 

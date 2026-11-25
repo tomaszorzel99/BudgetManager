@@ -33,7 +33,7 @@ public class HistoricalBalanceService {
         if(accounts.isEmpty()){
             return new BalanceAtDateDTO(
                     date, null, BigDecimal.ZERO,
-                    BigDecimal.ZERO, BigDecimal.ZERO);
+                    BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
         }
 
         List<Long> ids = accounts.stream().map(Account::getId).toList();
@@ -47,9 +47,7 @@ public class HistoricalBalanceService {
         for (Transaction transaction :
                 transactionRepository.findForHistoricalReport(ids, date)) {
 
-            BigDecimal amount = transaction.getType() == CategoryType.EXPENSE
-                    ? transaction.getAmount().negate()
-                    : transaction.getAmount();
+            BigDecimal amount = transaction.signedAmount();
 
             balances.merge(
                     transaction.getAccount().getId(),
@@ -81,6 +79,7 @@ public class HistoricalBalanceService {
         BigDecimal total = BigDecimal.ZERO;
         BigDecimal savings = BigDecimal.ZERO;
         BigDecimal investments = BigDecimal.ZERO;
+        BigDecimal liabilities = BigDecimal.ZERO;
         String currency = null;
 
         for (Account account : accounts) {
@@ -104,10 +103,12 @@ public class HistoricalBalanceService {
                 savings = savings.add(balance);
             } else if (account.getAccountType() == AccountType.INVESTMENT) {
                 investments = investments.add(balance);
+            } else if (account.isLiability()) {
+                liabilities = liabilities.add(balance);
             }
         }
 
         return new BalanceAtDateDTO(
-                date, currency, total, savings, investments);
+                date, currency, total, savings, investments, liabilities);
     }
 }

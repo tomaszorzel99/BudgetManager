@@ -227,6 +227,9 @@ public class RecurringTransactionService {
                 .noneMatch(member -> member.getId().equals(userId))) {
             throw new AccessDeniedException("No access to this account");
         }
+        if (account.isLiability()) {
+            throw new IllegalArgumentException("Recurring transactions cannot use a loan account");
+        }
         return account;
     }
 

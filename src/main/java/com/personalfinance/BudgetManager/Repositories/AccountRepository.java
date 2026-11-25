@@ -34,8 +34,9 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
             "JOIN ug.users u " +
             "WHERE u.id = :userId " +
             "AND a.availableForSpending = true " +
+            "AND (a.accountType IS NULL OR a.accountType <> com.personalfinance.BudgetManager.Model.AccountType.LOAN) " +
             "AND a.deletedAt IS NULL"
-            )
+    )
     BigDecimal getTotalAvailableBalance(@Param("userId") Long userId);
 
     @Query("SELECT COALESCE(SUM(a.balance), 0) FROM Account a " +

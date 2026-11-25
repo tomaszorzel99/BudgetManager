@@ -8,5 +8,7 @@ public record BalanceAtDateDTO (
     String currency,
     BigDecimal totalBalance,
     BigDecimal savingsBalance,
-    BigDecimal investmentBalance){
+    BigDecimal investmentBalance,
+    /** Suma sald kont kredytów (≤ 0). totalBalance zawiera ją już, więc to wartość netto. */
+    BigDecimal liabilitiesBalance){
 }

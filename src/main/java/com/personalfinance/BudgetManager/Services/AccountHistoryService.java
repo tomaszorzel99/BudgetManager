@@ -43,7 +43,7 @@ public class AccountHistoryService {
         record Row(LocalDate date, LocalDateTime created, long id, AccountHistoryEntryDTO entry) { }
         List<Row> rows = new ArrayList<>();
         for (Transaction t : transactionRepository.findAllForAccountHistory(accountId)) {
-            BigDecimal amount = t.getType() == CategoryType.EXPENSE ? t.getAmount().negate() : t.getAmount();
+            BigDecimal amount = t.signedAmount();
             rows.add(new Row(t.getTransactionDate(), t.getCreatedAt(), t.getId(), new AccountHistoryEntryDTO(
                     "TRANSACTION", t.getId(), t.getTransactionDate(), t.getType().name(), t.getDescription(),
                     t.getCategory().getName(), t.getSubcategory() != null ? t.getSubcategory().getName() : null,

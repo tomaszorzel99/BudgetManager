@@ -27,8 +27,9 @@ public class AccountService {
     private final TransferRepository transferRepository;
     private final RecurringTransactionRepository recurringTransactionRepository;
     private final SavingsGoalRepository savingsGoalRepository;
+    private final LoanRepository loanRepository;
 
-    public AccountService(AccountRepository accountRepository, UserRepository userRepository, UserService userService, TransactionRepository transactionRepository, CategoryRepository categoryRepository, SubcategoryRepository subcategoryRepository, TransferRepository transferRepository, RecurringTransactionRepository recurringTransactionRepository, SavingsGoalRepository savingsGoalRepository) {
+    public AccountService(AccountRepository accountRepository, UserRepository userRepository, UserService userService, TransactionRepository transactionRepository, CategoryRepository categoryRepository, SubcategoryRepository subcategoryRepository, TransferRepository transferRepository, RecurringTransactionRepository recurringTransactionRepository, SavingsGoalRepository savingsGoalRepository, LoanRepository loanRepository) {
         this.accountRepository = accountRepository;
         this.userRepository = userRepository;
         this.userService = userService;
@@ -38,12 +39,16 @@ public class AccountService {
         this.transferRepository = transferRepository;
         this.recurringTransactionRepository = recurringTransactionRepository;
         this.savingsGoalRepository = savingsGoalRepository;
+        this.loanRepository = loanRepository;
     }
 
     @Transactional
     public Account createAccount(CreateAccountRequest request, Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserException(userId));
+        if (AccountType.isLiability(request.getAccountType())) {
+            throw new IllegalArgumentException("Loan accounts are created via /api/loans");
+        }
 
         UserGroup group = user.getUserGroups().stream()
                 .filter(u -> u.getId().equals(request.getGroupId()))
@@ -93,7 +98,8 @@ public class AccountService {
     public void deleteAccountById(Long id, Long userId) throws AccessDeniedException {
         Account account = getOwnedAccount(id, userId);
 
-        boolean hasRealTransaction = transactionRepository.existsByAccountIdAndTypeNot(id, CategoryType.INITIAL_BALANCE);
+        boolean hasRealTransaction = transactionRepository.existsByAccountIdAndTypeNotIn(id,
+                List.of(CategoryType.INITIAL_BALANCE, CategoryType.LIABILITY_OPENING));
         if (hasRealTransaction) {
             throw new IllegalStateException("Cannot delete account with transactions. Please archive the account instead.");
         }
@@ -102,6 +108,8 @@ public class AccountService {
         }
         recurringTransactionRepository.deleteAllForAccount(id);
         savingsGoalRepository.unlinkAccount(id);
+        loanRepository.unlinkPaymentAccount(id);
+        loanRepository.deleteByAccountId(id);
         transactionRepository.deleteByAccountId(id);
         accountRepository.delete(account);
     }
@@ -123,9 +131,15 @@ public class AccountService {
         account.setDeletedAt(LocalDateTime.now());
     }
 
+
     public void updateExistingAccountWithPatch(Account existingAccount, UpdateAccountRequest request){
         if (request.getName() != null) existingAccount.setName(request.getName());
-        if (request.getAccountType() != null) existingAccount.setAccountType(request.getAccountType());
+        if (request.getAccountType() != null && request.getAccountType() != existingAccount.getAccountType()) {
+            if (AccountType.isLiability(request.getAccountType()) || existingAccount.isLiability()) {
+                throw new IllegalArgumentException("Cannot change an account to or from a loan; create a loan in the Loans section");
+            }
+            existingAccount.setAccountType(request.getAccountType());
+        }
         //if (request.getCurrency() != null) existingAccount.setCurrency(request.getCurrency());
         if (request.getCurrency() != null
                 && !request.getCurrency().equalsIgnoreCase(existingAccount.getCurrency())) {
@@ -138,6 +152,9 @@ public class AccountService {
         }
         if (request.getBalance() != null) {
             throw new IllegalArgumentException("Balance cannot be edited directly; create an adjustment transaction");
+        }
+        if (Boolean.TRUE.equals(request.getAvailableForSpending()) && existingAccount.isLiability()) {
+            throw new IllegalArgumentException("A loan account cannot be available for spending");
         }
         if (request.getAvailableForSpending() !=null) {
             existingAccount.setAvailableForSpending(request.getAvailableForSpending());

@@ -8,7 +8,8 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -27,6 +28,8 @@ public class Account extends AuditableEntity {
     private String name;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "account_type", length = 30)
     private AccountType accountType;
 
     @NotBlank(message = "Currency cannot be blank")
@@ -43,10 +46,13 @@ public class Account extends AuditableEntity {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    public boolean isLiability() {
+        return AccountType.isLiability(accountType);
+    }
+
     @PrePersist
     public void prePersist() {
-        if (this.balance == null){
-            this.balance = BigDecimal.ZERO;
+        if (this.balance == null) {
         }
     }
 }

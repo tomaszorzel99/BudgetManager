@@ -119,6 +119,9 @@ public class SavingsGoalService {
                 .noneMatch(member -> member.getId().equals(userId))) {
             throw new AccessDeniedException("No access to this account");
         }
+        if (account.isLiability()) {
+            throw new IllegalArgumentException("A savings goal cannot be linked to a loan account");
+        }
         return account;
     }
 

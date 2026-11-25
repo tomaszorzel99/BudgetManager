@@ -79,14 +79,26 @@ public class AccountBalanceService {
             if (account.getDeletedAt() != null && delta.signum() != 0) {
                 throw new IllegalArgumentException("Cannot change an archived account balance");
             }
-            if (delta.signum() < 0 && account.getBalance().compareTo(delta.negate()) < 0) {
-                throw new IllegalArgumentException("Not enough balance in account " + account.getName());
-            }
+            checkBalanceAfter(account, delta);
         }
         for (Map.Entry<Long, BigDecimal> entry : changes.entrySet()) {
             Account account = accounts.get(entry.getKey());
-            account.setBalance(account.getBalance().add(entry.getValue()));
-            accountRepository.save(account);
+        }
+    }
+
+    /**
+     * Konto zwykłe nie może zejść poniżej zera, a konto kredytu powyżej zera
+     * (nie da się spłacić więcej, niż wynosi dług). Cofnięcie spłaty kredytu jest dozwolone.
+     */
+    static void checkBalanceAfter(Account account, BigDecimal delta) {
+        BigDecimal after = account.getBalance().add(delta);
+        if (account.isLiability()) {
+            if (delta.signum() > 0 && after.signum() > 0) {
+                throw new IllegalArgumentException("Amount exceeds the remaining debt on " + account.getName()
+                        + " (" + account.getBalance().negate() + ")");
+            }
+        } else if (delta.signum() < 0 && after.signum() < 0) {
+            throw new IllegalArgumentException("Not enough balance in account " + account.getName());
         }
     }
 //        // Keep the lock order stable for concurrent transfers in opposite directions.

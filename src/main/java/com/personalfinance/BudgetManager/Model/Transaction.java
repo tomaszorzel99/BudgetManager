@@ -59,4 +59,9 @@ public class Transaction extends AuditableEntity {
     @JoinColumn(name = "subcategory_id")
     private Subcategory subcategory;
 
+    /** Kwota ze znakiem, z jakim zmienia saldo konta (wydatek i saldo początkowe długu na minus). */
+    public BigDecimal signedAmount() {
+        return type.signed(amount);
+    }
+
 }

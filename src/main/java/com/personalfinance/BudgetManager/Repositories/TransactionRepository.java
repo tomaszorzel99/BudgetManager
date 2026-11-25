@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,8 +20,10 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
     Optional<Transaction> findByIdAndUserEmail(Long id, String email);
     Optional<Transaction> findByIdAndUserId(Long id, Long userId);
     boolean existsByAccountIdAndTypeNot(Long id, CategoryType type);
+    boolean existsByAccountIdAndTypeNotIn(Long id, Collection<CategoryType> types);
     boolean existsByAccountId(Long id);
     void deleteByAccountId(Long id);
+
 
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t " +
             "WHERE t.user.id = :userId " +
