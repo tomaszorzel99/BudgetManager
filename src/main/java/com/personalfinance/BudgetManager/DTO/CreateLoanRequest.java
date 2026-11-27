@@ -11,6 +11,7 @@ import java.time.LocalDate;
 /**
  * Nowy kredyt. {@code outstandingPrincipal} to kwota „pozostało do spłaty” z wyciągu na dzień
  * {@code balanceDate}; {@code originalPrincipal} i {@code startDate} pochodzą z umowy.
+ * {@code subsidizedRate} i {@code subsidyEndDate} tylko przy kredycie z dopłatą (np. Bezpieczny Kredyt 2%).
  */
 public record CreateLoanRequest(
         @NotBlank @Size(max = 100) String name,
@@ -27,5 +28,7 @@ public record CreateLoanRequest(
         LoanRateType rateType,
         @NotNull @Min(1) @Max(31) Integer paymentDay,
         OverpaymentStrategy overpaymentStrategy,
-        Long defaultPaymentAccountId) {
+        Long defaultPaymentAccountId,
+        @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 4) BigDecimal subsidizedRate,
+        LocalDate subsidyEndDate) {
 }

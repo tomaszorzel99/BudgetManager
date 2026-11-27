@@ -46,7 +46,9 @@ public class CategoryService {
     public Category updateCategory(Long id, UpdateCategoryRequest request) throws AccessDeniedException {
 
         Category category = categoryRepository.findById(id).orElseThrow(() -> new CategoryException(id));
-
+        if (category.isSystem() && request.getCategoryType() != null && request.getCategoryType() != category.getType()) {
+            throw new IllegalArgumentException("The type of a system category cannot be changed");
+        }
         updateCategoryWithPatch(category, request);
         return categoryRepository.save(category);
     }
@@ -67,6 +69,9 @@ public class CategoryService {
     public void deleteCategoryById(Long id){
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new CategoryException(id));
+        if (category.isSystem()) {
+            throw new IllegalArgumentException("A system category cannot be deleted");
+        }
         categoryRepository.delete(category);
     }
 

@@ -2,7 +2,7 @@ package com.personalfinance.BudgetManager.Model;
 
 import com.personalfinance.BudgetManager.Audit.AuditableEntity;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -30,7 +30,6 @@ public class Transaction extends AuditableEntity {
     private Long id;
 
     @NotNull(message = "Amount cannot be null")
-    @DecimalMin(value = "0.01", message = "Amount must be greater than 0")
     private BigDecimal amount;
 
     @NotNull
@@ -56,8 +55,21 @@ public class Transaction extends AuditableEntity {
     private Category category;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    /** Opcjonalna: null = transakcja bez podkategorii (V13). */
     @JoinColumn(name = "subcategory_id")
     private Subcategory subcategory;
+
+    /**
+     * Kwota musi być dodatnia. Wyjątek: korekta może być ujemna (spadek wyceny nieruchomości, V16),
+     * żeby obniżenie wartości mieszkania nie trafiało do wydatków.
+     */
+    @AssertTrue(message = "Amount must be greater than 0")
+    public boolean isAmountValid() {
+        if (amount == null || type == null) {
+            return true; // braki zgłasza @NotNull
+        }
+        return amount.signum() > 0 || (type == CategoryType.ADJUSTMENT && amount.signum() < 0);
+    }
 
     /** Kwota ze znakiem, z jakim zmienia saldo konta (wydatek i saldo początkowe długu na minus). */
     public BigDecimal signedAmount() {

@@ -164,6 +164,9 @@ public class TransferService {
         if (fromAccount.isLiability() || toAccount.isLiability()) {
             throw new IllegalArgumentException("Loan repayments are recorded in the Loans section, not as transfers");
         }
+        if (fromAccount.isProperty() || toAccount.isProperty()) {
+            throw new IllegalArgumentException("A property is not a cash account; update its value instead of transferring money");
+        }
     }
 
     private void validateUserOwnsAccount(User user, Account fromAccount, Account toAccount) {

@@ -24,6 +24,23 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
     boolean existsByAccountId(Long id);
     void deleteByAccountId(Long id);
 
+    /** Czy transakcja jest częścią spłaty kredytu (odsetki lub opłaty); takie zmienia się tylko przez spłatę. */
+    @Query("SELECT COUNT(p) > 0 FROM LoanPayment p " +
+            "WHERE p.interestTransaction.id = :transactionId OR p.feeTransaction.id = :transactionId")
+    boolean isPartOfLoanPayment(@Param("transactionId") Long transactionId);
+
+    /** Wydatki w kategorii systemowej (np. LOAN_COSTS) w okresie, tak jak inne raporty: po autorze. */
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t " +
+            "WHERE t.user.id = :userId " +
+            "AND t.type = com.personalfinance.BudgetManager.Model.CategoryType.EXPENSE " +
+            "AND t.category.systemKey = :systemKey " +
+            "AND t.transactionDate BETWEEN :startDate AND :endDate")
+    BigDecimal getTotalExpensesBySystemCategory(
+            @Param("userId") Long userId,
+            @Param("systemKey") String systemKey,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
+
 
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t " +
             "WHERE t.user.id = :userId " +

@@ -2,6 +2,7 @@ package com.personalfinance.BudgetManager.Services;
 
 import com.personalfinance.BudgetManager.DTO.CreateAccountRequest;
 import com.personalfinance.BudgetManager.DTO.UpdateAccountRequest;
+import com.personalfinance.BudgetManager.DTO.PropertyValueRequest;
 import com.personalfinance.BudgetManager.Exception.AccountException;
 import com.personalfinance.BudgetManager.Exception.UserException;
 import com.personalfinance.BudgetManager.Model.*;
@@ -61,12 +62,14 @@ public class AccountService {
         account.setBalance(request.getInitialBalance());
         account.setGroup(group);
         account.setAccountType(request.getAccountType());
-        account.setAvailableForSpending(request.isAvailableForSpending());
+        // Mieszkania nie da się wydać: nieruchomość nigdy nie jest „dostępna do wydania”.
+        account.setAvailableForSpending(request.isAvailableForSpending() && !AccountType.isProperty(request.getAccountType()));
 
         Account savedAccount = accountRepository.save(account);
 
         if (request.getInitialBalance() != null && request.getInitialBalance().compareTo(BigDecimal.ZERO) > 0) {
-            createInitialTransaction(savedAccount, request.getInitialBalance(), user);
+            LocalDate date = request.getInitialBalanceDate() != null ? request.getInitialBalanceDate() : LocalDate.now();
+            createInitialTransaction(savedAccount, request.getInitialBalance(), date, user);
         }
         return savedAccount;
     }
@@ -103,6 +106,9 @@ public class AccountService {
         if (hasRealTransaction) {
             throw new IllegalStateException("Cannot delete account with transactions. Please archive the account instead.");
         }
+        if (loanRepository.hasPayments(id)) {
+            throw new IllegalStateException("Cannot delete account with loan payments. Please archive the account instead.");
+        }
         if (transferRepository.existsByFromAccountIdOrToAccountId(id, id)) {
             throw new IllegalStateException("Cannot delete account with transfers. Please archive the account instead.");
         }
@@ -138,7 +144,19 @@ public class AccountService {
             if (AccountType.isLiability(request.getAccountType()) || existingAccount.isLiability()) {
                 throw new IllegalArgumentException("Cannot change an account to or from a loan; create a loan in the Loans section");
             }
+            if (AccountType.isProperty(request.getAccountType()) || existingAccount.isProperty()) {
+                // Np. mieszkanie wpisane wcześniej jako „Inwestycje”: można przenieść, jeśli konto nie ma
+                // przychodów, wydatków ani przelewów (te nie mają sensu na nieruchomości).
+                boolean hasCashFlow = transactionRepository.existsByAccountIdAndTypeNotIn(existingAccount.getId(),
+                        List.of(CategoryType.INITIAL_BALANCE, CategoryType.LIABILITY_OPENING, CategoryType.ADJUSTMENT));
+                if (hasCashFlow || transferRepository.existsByFromAccountIdOrToAccountId(existingAccount.getId(), existingAccount.getId())) {
+                    throw new IllegalArgumentException("Only an account without income, expenses and transfers can be changed to or from a property");
+                }
+            }
             existingAccount.setAccountType(request.getAccountType());
+            if (existingAccount.isProperty()) {
+                existingAccount.setAvailableForSpending(false);
+            }
         }
         //if (request.getCurrency() != null) existingAccount.setCurrency(request.getCurrency());
         if (request.getCurrency() != null
@@ -156,12 +174,53 @@ public class AccountService {
         if (Boolean.TRUE.equals(request.getAvailableForSpending()) && existingAccount.isLiability()) {
             throw new IllegalArgumentException("A loan account cannot be available for spending");
         }
+        if (Boolean.TRUE.equals(request.getAvailableForSpending()) && existingAccount.isProperty()) {
+            throw new IllegalArgumentException("A property cannot be available for spending");
+        }
         if (request.getAvailableForSpending() !=null) {
             existingAccount.setAvailableForSpending(request.getAvailableForSpending());
         }
     }
 
-    private void createInitialTransaction(Account account, BigDecimal amount, User creator) {
+    /**
+     * Nowa wycena nieruchomości: różnica do obecnej wartości jako korekta „Wycena nieruchomości”.
+     * Kwota korekty może być ujemna (spadek wartości), dzięki czemu nie trafia do wydatków.
+     */
+    @Transactional
+    public Account revalueProperty(Long id, Long userId, PropertyValueRequest request) throws AccessDeniedException {
+        Account account = accountRepository.findByIdWithLock(id)
+                .filter(a -> a.getGroup().getUsers().stream().anyMatch(u -> u.getId().equals(userId)))
+                .orElseThrow(() -> new AccessDeniedException("You are not owner of this account or account does not exist"));
+        if (!account.isProperty()) {
+            throw new IllegalArgumentException("Only a property account can be revalued");
+        }
+        if (account.getDeletedAt() != null) {
+            throw new IllegalArgumentException("Account is archived");
+        }
+        BigDecimal value = request.value().setScale(2, java.math.RoundingMode.HALF_UP);
+        BigDecimal diff = value.subtract(account.getBalance());
+        if (diff.signum() == 0) {
+            return account;
+        }
+        User user = userRepository.findById(userId).orElseThrow(() -> new UserException(userId));
+        Category category = categoryRepository.findBySystemKey(SystemCategory.ADJUSTMENT)
+                .orElseThrow(() -> new IllegalStateException("System category ADJUSTMENT is missing (migration V15)"));
+        Transaction transaction = new Transaction();
+        transaction.setAmount(diff);
+        transaction.setType(CategoryType.ADJUSTMENT);
+        transaction.setDescription(request.description() != null && !request.description().isBlank()
+                ? request.description().trim() : "Aktualizacja wyceny");
+        transaction.setTransactionDate(request.date() != null ? request.date() : LocalDate.now());
+        transaction.setCategory(category);
+        transaction.setSubcategory(subcategoryRepository.findBySystemKey(SystemCategory.PROPERTY_VALUATION).orElse(null));
+        transaction.setAccount(account);
+        transaction.setUser(user);
+        transactionRepository.save(transaction);
+        account.setBalance(value);
+        return account;
+    }
+
+    private void createInitialTransaction(Account account, BigDecimal amount, LocalDate date, User creator) {
         Category category = categoryRepository.findAll().stream()
                 .filter(c -> "Initial Balance".equals(c.getName()))
                 .findFirst()
@@ -175,7 +234,7 @@ public class AccountService {
         transaction.setAmount(amount);
         transaction.setType(CategoryType.INITIAL_BALANCE);
         transaction.setDescription("Initial balance");
-        transaction.setTransactionDate(LocalDate.now());
+        transaction.setTransactionDate(date);
         transaction.setCategory(category);
         transaction.setSubcategory(subcategory);
         transaction.setAccount(account);

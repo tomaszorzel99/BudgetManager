@@ -62,17 +62,42 @@ public class AccountBalanceService {
     }
 
     private void applyChanges(Map<Long, BigDecimal> changes, Long newFromId, Long newToId) {
+        Map<Long, Account> accounts = lockAll(changes);
+        Account from = accounts.get(newFromId);
+        Account to = accounts.get(newToId);
+        if (from.getDeletedAt() != null || to.getDeletedAt() != null) {
+            throw new IllegalArgumentException("Cannot transfer to or from an archived account");
+        }
+        checkAndApply(changes, accounts);
+    }
+
+    /**
+     * Zmienia salda kilku kont naraz (np. spłata kredytu: konto płatnika i konto kredytu).
+     * Blokuje konta w stałej kolejności, sprawdza reguły salda dla wszystkich i dopiero wtedy
+     * zapisuje, więc albo zmieniają się wszystkie salda, albo żadne. Zera są pomijane.
+     */
+    @Transactional
+    public Map<Long, Account> applyDeltas(Map<Long, BigDecimal> changes) {
+        Map<Long, BigDecimal> nonZero = new HashMap<>();
+        changes.forEach((id, delta) -> {
+            if (delta.signum() != 0) nonZero.put(id, delta);
+        });
+        Map<Long, Account> accounts = lockAll(nonZero);
+        checkAndApply(nonZero, accounts);
+        return accounts;
+    }
+
+    private Map<Long, Account> lockAll(Map<Long, BigDecimal> changes) {
         Map<Long, Account> accounts = new HashMap<>();
         // Lock in a stable order, including every account touched by an edit.
         for (Long id : new TreeSet<>(changes.keySet())) {
             accounts.put(id, accountRepository.findByIdWithLock(id)
                     .orElseThrow(() -> new AccountException(id)));
         }
-        Account from = accounts.get(newFromId);
-        Account to = accounts.get(newToId);
-        if (from.getDeletedAt() != null || to.getDeletedAt() != null) {
-            throw new IllegalArgumentException("Cannot transfer to or from an archived account");
-        }
+        return accounts;
+    }
+
+    private void checkAndApply(Map<Long, BigDecimal> changes, Map<Long, Account> accounts) {
         for (Map.Entry<Long, BigDecimal> entry : changes.entrySet()) {
             Account account = accounts.get(entry.getKey());
             BigDecimal delta = entry.getValue();
@@ -83,9 +108,10 @@ public class AccountBalanceService {
         }
         for (Map.Entry<Long, BigDecimal> entry : changes.entrySet()) {
             Account account = accounts.get(entry.getKey());
+            account.setBalance(account.getBalance().add(entry.getValue()));
+            accountRepository.save(account);
         }
     }
-
     /**
      * Konto zwykłe nie może zejść poniżej zera, a konto kredytu powyżej zera
      * (nie da się spłacić więcej, niż wynosi dług). Cofnięcie spłaty kredytu jest dozwolone.
@@ -101,6 +127,7 @@ public class AccountBalanceService {
             throw new IllegalArgumentException("Not enough balance in account " + account.getName());
         }
     }
+
 //        // Keep the lock order stable for concurrent transfers in opposite directions.
 //        Account first = accountRepository.findByIdWithLock(Math.min(fromAccountId, toAccountId))
 //                .orElseThrow(() -> new AccountException(Math.min(fromAccountId, toAccountId)));

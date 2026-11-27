@@ -32,5 +32,16 @@ public record LoanDTO(
         OverpaymentStrategy overpaymentStrategy,
         Long defaultPaymentAccountId,
         String defaultPaymentAccountName,
-        LocalDateTime createdAt) {
+        LocalDateTime createdAt,
+        BigDecimal subsidizedRate,
+        LocalDate subsidyEndDate,
+        /** Suma spłaconego kapitału z rat zapisanych w aplikacji. */
+        BigDecimal installmentPrincipalPaid,
+        BigDecimal overpaidPrincipal,
+        /** Odsetki zapłacone z własnej kieszeni (po dopłacie). */
+        BigDecimal interestPaid,
+        BigDecimal subsidyReceived,
+        BigDecimal feesPaid,
+        long paymentsCount,
+        LocalDate lastPaymentDate) {
 }

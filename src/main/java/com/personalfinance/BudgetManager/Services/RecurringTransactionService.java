@@ -230,8 +230,12 @@ public class RecurringTransactionService {
         if (account.isLiability()) {
             throw new IllegalArgumentException("Recurring transactions cannot use a loan account");
         }
+        if (account.isProperty()) {
+            throw new IllegalArgumentException("Recurring transactions cannot use a property account");
+        }
         return account;
     }
+
 
     private void applyCategory(RecurringTransaction recurring, Long categoryId, Long subcategoryId) {
         Category category = categoryRepository.findById(categoryId).orElseThrow(() -> new CategoryException(categoryId));

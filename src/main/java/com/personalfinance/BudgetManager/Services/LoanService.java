@@ -20,7 +20,7 @@ import java.util.Locale;
 
 /**
  * Kredyty: konto LOAN z ujemnym saldem plus parametry z umowy ({@link Loan}).
- * Spłaty dochodzą w etapie 2; tu zakładanie, lista i zmiana parametrów.
+ * Tu zakładanie, lista i zmiana parametrów; spłaty są w {@link LoanPaymentService}.
  */
 @Service
 public class LoanService {
@@ -34,16 +34,19 @@ public class LoanService {
     private final TransactionRepository transactionRepository;
     private final CategoryRepository categoryRepository;
     private final SubcategoryRepository subcategoryRepository;
+    private final LoanPaymentRepository paymentRepository;
 
     public LoanService(LoanRepository loanRepository, AccountRepository accountRepository,
                        UserRepository userRepository, TransactionRepository transactionRepository,
-                       CategoryRepository categoryRepository, SubcategoryRepository subcategoryRepository) {
+                       CategoryRepository categoryRepository, SubcategoryRepository subcategoryRepository,
+                       LoanPaymentRepository paymentRepository) {
         this.loanRepository = loanRepository;
         this.accountRepository = accountRepository;
         this.userRepository = userRepository;
         this.transactionRepository = transactionRepository;
         this.categoryRepository = categoryRepository;
         this.subcategoryRepository = subcategoryRepository;
+        this.paymentRepository = paymentRepository;
     }
 
     /** Zakłada konto LOAN z saldem −pozostało do spłaty, parametry kredytu i transakcję salda początkowego długu. */
@@ -90,21 +93,22 @@ public class LoanService {
         if (request.defaultPaymentAccountId() != null) {
             loan.setDefaultPaymentAccount(paymentAccount(request.defaultPaymentAccountId(), userId, currency));
         }
+        setSubsidy(loan, request.subsidizedRate(), request.subsidyEndDate());
         loan = loanRepository.save(loan);
 
         createOpeningTransaction(account, outstanding, balanceDate, user);
-        return toDTO(loan, today);
+        return toDTO(loan, today, LoanPaymentRepository.Totals.EMPTY);
     }
 
     @Transactional(readOnly = true)
     public List<LoanDTO> getLoans(Long userId) {
         LocalDate today = LocalDate.now();
-        return loanRepository.findActiveForUser(userId).stream().map(l -> toDTO(l, today)).toList();
+        return loanRepository.findActiveForUser(userId).stream().map(l -> dto(l, today)).toList();
     }
 
     @Transactional(readOnly = true)
     public LoanDTO getLoan(Long userId, Long id) {
-        return toDTO(owned(userId, id), LocalDate.now());
+        return dto(owned(userId, id), LocalDate.now());
     }
 
     @Transactional
@@ -129,7 +133,41 @@ public class LoanService {
         } else if (request.defaultPaymentAccountId() != null) {
             loan.setDefaultPaymentAccount(paymentAccount(request.defaultPaymentAccountId(), userId, account.getCurrency()));
         }
-        return toDTO(loan, LocalDate.now());
+        if (Boolean.TRUE.equals(request.clearSubsidy())) {
+            loan.setSubsidizedRate(null);
+            loan.setSubsidyEndDate(null);
+        } else if (request.subsidizedRate() != null || request.subsidyEndDate() != null) {
+            setSubsidy(loan,
+                    request.subsidizedRate() != null ? request.subsidizedRate() : loan.getSubsidizedRate(),
+                    request.subsidyEndDate() != null ? request.subsidyEndDate() : loan.getSubsidyEndDate());
+        } else if (loan.getSubsidizedRate() != null
+                && loan.getSubsidizedRate().compareTo(loan.getAnnualInterestRate()) > 0) {
+            throw new IllegalArgumentException("Subsidized rate cannot be higher than the loan interest rate");
+        }
+        return dto(loan, LocalDate.now());
+    }
+
+    /** Dopłata do rat: oprocentowanie po dopłacie nie wyższe niż z umowy; data końca tylko razem z nim. */
+    private static void setSubsidy(Loan loan, BigDecimal subsidizedRate, LocalDate endDate) {
+        if (subsidizedRate == null) {
+            if (endDate != null) {
+                throw new IllegalArgumentException("Subsidy end date requires the subsidized interest rate");
+            }
+            return;
+        }
+        BigDecimal value = rate(subsidizedRate);
+        if (value.compareTo(loan.getAnnualInterestRate()) > 0) {
+            throw new IllegalArgumentException("Subsidized rate cannot be higher than the loan interest rate");
+        }
+        if (endDate != null && endDate.isBefore(loan.getStartDate())) {
+            throw new IllegalArgumentException("Subsidy end date cannot be before the loan start date");
+        }
+        loan.setSubsidizedRate(value);
+        loan.setSubsidyEndDate(endDate);
+    }
+
+    private LoanDTO dto(Loan loan, LocalDate today) {
+        return toDTO(loan, today, paymentRepository.totalsForLoan(loan.getId()));
     }
 
     private Loan owned(Long userId, Long id) {
@@ -146,6 +184,9 @@ public class LoanService {
         }
         if (account.isLiability()) {
             throw new IllegalArgumentException("A loan cannot be repaid from another loan account");
+        }
+        if (account.isProperty()) {
+            throw new IllegalArgumentException("A loan cannot be repaid from a property account");
         }
         if (!account.getCurrency().equalsIgnoreCase(currency)) {
             throw new IllegalArgumentException("Payment account must use the loan currency (" + currency + ")");
@@ -170,7 +211,7 @@ public class LoanService {
         transactionRepository.save(transaction);
     }
 
-    static LoanDTO toDTO(Loan loan, LocalDate today) {
+    static LoanDTO toDTO(Loan loan, LocalDate today, LoanPaymentRepository.Totals totals) {
         Account account = loan.getAccount();
         BigDecimal outstanding = account.getBalance() == null ? BigDecimal.ZERO : account.getBalance().negate();
         BigDecimal repaid = loan.getOriginalPrincipal().subtract(outstanding).max(BigDecimal.ZERO);
@@ -185,10 +226,19 @@ public class LoanService {
                 loan.getLender(), loan.getOriginalPrincipal(), outstanding, repaid, percent,
                 loan.getStartDate(), loan.getTermMonths(), loan.plannedEndDate(),
                 loan.getAnnualInterestRate(), loan.getRateType(), loan.getInstallmentType(),
-                loan.getPaymentDay(), paidOff ? null : loan.nextPaymentDate(today),
+                loan.getPaymentDay(), paidOff ? null : loan.nextPaymentDate(nextFrom(today, totals.lastInstallmentDate())),
                 loan.getOverpaymentStrategy(),
                 payer != null ? payer.getId() : null, payer != null ? payer.getName() : null,
-                loan.getCreatedAt());
+                loan.getCreatedAt(),
+                loan.getSubsidizedRate(), loan.getSubsidyEndDate(),
+                totals.installmentPrincipal(), totals.overpaidPrincipal(),
+                totals.interest().subtract(totals.subsidy()), totals.subsidy(), totals.fees(),
+                totals.count(), totals.lastPaymentDate());
+    }
+
+    /** Następna rata liczy się od dziś, a gdy rata na ten termin jest już zapisana, od dnia po niej. */
+    private static LocalDate nextFrom(LocalDate today, LocalDate lastInstallment) {
+        return lastInstallment != null && !lastInstallment.isBefore(today) ? lastInstallment.plusDays(1) : today;
     }
 
     private static BigDecimal money(BigDecimal value) {

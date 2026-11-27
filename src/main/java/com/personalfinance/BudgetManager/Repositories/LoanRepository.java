@@ -20,6 +20,11 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
             "WHERE l.id = :id AND u.id = :userId")
     Optional<Loan> findByIdForUser(@Param("id") Long id, @Param("userId") Long userId);
 
+    /** Czy konto ma spłaty kredytu, jako płatnik albo jako konto kredytu. */
+    @Query("SELECT COUNT(p) > 0 FROM LoanPayment p " +
+            "WHERE p.payerAccount.id = :accountId OR p.loan.account.id = :accountId")
+    boolean hasPayments(@Param("accountId") Long accountId);
+
     @Modifying
     @Query("DELETE FROM Loan l WHERE l.account.id = :accountId")
     void deleteByAccountId(@Param("accountId") Long accountId);

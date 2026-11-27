@@ -61,6 +61,9 @@ public class SubcategoryService {
 
     public void deleteSubcategoriesById(Long id){
         Subcategory subcategory = subcategoryRepository.findById(id).orElseThrow(() -> new SubcategoryException(id));
+        if (subcategory.isSystem()) {
+            throw new IllegalArgumentException("A system subcategory cannot be deleted");
+        }
         subcategoryRepository.delete(subcategory);
     }
 }

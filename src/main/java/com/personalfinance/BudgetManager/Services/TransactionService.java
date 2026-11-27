@@ -48,6 +48,9 @@ public class TransactionService {
         if (account.isLiability() && request.getType() == CategoryType.INCOME) {
             throw new IllegalArgumentException("Income cannot be booked on a loan account; record a loan payment instead");
         }
+        if (account.isProperty() && request.getType() != CategoryType.ADJUSTMENT) {
+            throw new IllegalArgumentException("A property has no income or expenses; update its value instead");
+        }
         requirePositive(request.getAmount());
         applyBalanceChange(account, request.getType(), request.getAmount());
 
@@ -109,6 +112,7 @@ public class TransactionService {
         if (transaction.getType().isOpeningBalance()) {
             throw new IllegalArgumentException("Initial balance transaction cannot be deleted");
         }
+        rejectLoanPaymentPart(id);
         Account account = getAccessibleAccount(transaction.getAccount().getId(), userId);
         applyBalanceChange(account, transaction.getType(), transaction.getAmount().negate());
         transactionRepository.delete(transaction);
@@ -122,6 +126,7 @@ public class TransactionService {
         if (transaction.getType().isOpeningBalance()) {
             throw new IllegalArgumentException("Initial balance transaction cannot be edited");
         }
+        rejectLoanPaymentPart(id);
         Account account = getAccessibleAccount(transaction.getAccount().getId(), userId);
         Category category = request.getCategoryId() == null ? transaction.getCategory()
                 : categoryRepository.findById(request.getCategoryId())
@@ -143,6 +148,13 @@ public class TransactionService {
         transaction.setCategory(category);
         transaction.setSubcategory(subcategory);
         return transactionRepository.save(transaction);
+    }
+
+    /** Odsetki i opłaty ze spłaty kredytu zmienia się razem ze spłatą, inaczej rozjechałyby się salda. */
+    private void rejectLoanPaymentPart(Long transactionId) {
+        if (transactionRepository.isPartOfLoanPayment(transactionId)) {
+            throw new ConflictException("This transaction is part of a loan payment; edit or delete the payment in the Loans section");
+        }
     }
 
     private Account getAccessibleAccount(Long accountId, Long userId) {

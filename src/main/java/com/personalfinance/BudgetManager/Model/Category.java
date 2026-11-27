@@ -29,4 +29,12 @@ public class Category {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private CategoryType type;
+
+    /** Klucz kategorii systemowej (np. LOAN_COSTS); null dla kategorii użytkownika. */
+    @Column(name = "system_key", length = 40, unique = true, updatable = false)
+    private String systemKey;
+
+    public boolean isSystem() {
+        return systemKey != null;
+    }
 }

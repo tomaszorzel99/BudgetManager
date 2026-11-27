@@ -42,7 +42,9 @@ public class Loan extends AuditableEntity {
     @Column(name = "term_months", nullable = false)
     private int termMonths;
 
-    /** Oprocentowanie roczne w procentach, np. 7.2500 = 7,25%. */
+    /**
+     * Oprocentowanie roczne w procentach, np. 7.2500 = 7,25%.
+     */
     @Column(name = "annual_interest_rate", nullable = false, precision = 7, scale = 4)
     private BigDecimal annualInterestRate;
 
@@ -59,7 +61,9 @@ public class Loan extends AuditableEntity {
     @Column(name = "payment_day", nullable = false)
     private int paymentDay;
 
-    /** Domyślna strategia nadpłaty; przy każdej nadpłacie można wybrać inną. */
+    /**
+     * Domyślna strategia nadpłaty; przy każdej nadpłacie można wybrać inną.
+     */
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "overpayment_strategy", nullable = false, length = 20)
@@ -69,7 +73,31 @@ public class Loan extends AuditableEntity {
     @JoinColumn(name = "default_payment_account_id")
     private Account defaultPaymentAccount;
 
-    /** Planowana data ostatniej raty według umowy (bez uwzględnienia nadpłat). */
+    /**
+     * Dopłata do rat (np. Bezpieczny Kredyt 2%): oprocentowanie w procentach, które faktycznie płaci
+     * kredytobiorca. Różnicę do {@link #annualInterestRate} pokrywa państwo. Null = kredyt bez dopłat.
+     */
+    @Column(name = "subsidized_rate", precision = 7, scale = 4)
+    private BigDecimal subsidizedRate;
+
+    /**
+     * Ostatni dzień, za który przysługuje dopłata (włącznie). Null przy dopłacie = bez końca.
+     */
+    @Column(name = "subsidy_end_date")
+    private LocalDate subsidyEndDate;
+
+    /**
+     * Czy w danym dniu kredyt ma dopłatę do odsetek.
+     */
+    public boolean hasSubsidyOn(LocalDate date) {
+        return subsidizedRate != null
+                && subsidizedRate.compareTo(annualInterestRate) < 0
+                && (subsidyEndDate == null || !date.isAfter(subsidyEndDate));
+    }
+
+    /**
+     * Planowana data ostatniej raty według umowy (bez uwzględnienia nadpłat).
+     */
     public LocalDate plannedEndDate() {
         return startDate.plusMonths(termMonths);
     }

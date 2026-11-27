@@ -5,6 +5,7 @@ import com.personalfinance.BudgetManager.DTO.AccountDTO;
 import com.personalfinance.BudgetManager.DTO.AccountHistoryDTO;
 import com.personalfinance.BudgetManager.DTO.CreateAccountRequest;
 import com.personalfinance.BudgetManager.DTO.UpdateAccountRequest;
+import com.personalfinance.BudgetManager.DTO.PropertyValueRequest;
 import com.personalfinance.BudgetManager.Mapper.AccountMapper;
 import com.personalfinance.BudgetManager.Model.Account;
 import com.personalfinance.BudgetManager.Model.User;
@@ -68,6 +69,13 @@ public class AccountController {
     public ResponseEntity<AccountDTO> updateAccount(@PathVariable Long id, @Valid @RequestBody UpdateAccountRequest request) {
         Account updatedAccount = accountService.updateAccount(id, request);
         return ResponseEntity.ok().body(accountMapper.convertToDTO(updatedAccount));
+    }
+
+    /** Nowa wycena nieruchomości (tylko konto typu PROPERTY). */
+    @PostMapping("/{id}/value")
+    public ResponseEntity<AccountDTO> revalueProperty(@PathVariable Long id, @Valid @RequestBody PropertyValueRequest request,
+                                                      @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(accountMapper.convertToDTO(accountService.revalueProperty(id, userDetails.getId(), request)));
     }
 
     @PatchMapping("/{id}/archive")

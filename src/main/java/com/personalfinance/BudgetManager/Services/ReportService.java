@@ -8,11 +8,10 @@ import com.personalfinance.BudgetManager.DTO.MonthlyReportDTO;
 import com.personalfinance.BudgetManager.Exception.UserException;
 import com.personalfinance.BudgetManager.Model.AccountType;
 import com.personalfinance.BudgetManager.Model.CategoryType;
+import com.personalfinance.BudgetManager.Model.LoanPaymentKind;
+import com.personalfinance.BudgetManager.Model.SystemCategory;
 import com.personalfinance.BudgetManager.Model.User;
-import com.personalfinance.BudgetManager.Repositories.AccountRepository;
-import com.personalfinance.BudgetManager.Repositories.TransactionRepository;
-import com.personalfinance.BudgetManager.Repositories.TransferRepository;
-import com.personalfinance.BudgetManager.Repositories.UserRepository;
+import com.personalfinance.BudgetManager.Repositories.*;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -32,13 +31,15 @@ public class ReportService {
     private final AccountRepository accountRepository;
     private final TransferRepository transferRepository;
     private final HistoricalBalanceService historicalBalanceService;
+    private final LoanPaymentRepository loanPaymentRepository;
 
-    public ReportService(TransactionRepository transactionRepository, UserRepository userRepository, AccountRepository accountRepository, TransferRepository transferRepository, HistoricalBalanceService historicalBalanceService) {
+    public ReportService(TransactionRepository transactionRepository, UserRepository userRepository, AccountRepository accountRepository, TransferRepository transferRepository, HistoricalBalanceService historicalBalanceService, LoanPaymentRepository loanPaymentRepository) {
         this.transactionRepository = transactionRepository;
         this.userRepository = userRepository;
         this.accountRepository = accountRepository;
         this.transferRepository = transferRepository;
         this.historicalBalanceService = historicalBalanceService;
+        this.loanPaymentRepository = loanPaymentRepository;
     }
 
     public MonthlyReportDTO getMonthlyReport(String userEmail, int month, int year){
@@ -51,6 +52,14 @@ public class ReportService {
         BigDecimal expenses = transactionRepository.getTotalExpensesByMonth(user.getId(), CategoryType.EXPENSE, startDate, endDate);
         BigDecimal transfersToSavings = transferRepository.getTotalTransfersToTypeByMonth(user.getId(), AccountType.SAVINGS, month, year);
         BigDecimal transfersFromSavings = transferRepository.getTotalTransfersFromTypeByMonth(user.getId(), AccountType.SAVINGS, month, year);
+        BigDecimal netSavings = transfersToSavings.subtract(transfersFromSavings);
+
+        // Kredyty: kapitał spłacony to przesunięcie majątku, nie wydatek; koszty (odsetki, opłaty) są już w expenses.
+        BigDecimal principal = loanPaymentRepository.sumPrincipal(user.getId(), LoanPaymentKind.INSTALLMENT, startDate, endDate);
+        BigDecimal overpayments = loanPaymentRepository.sumPrincipal(user.getId(), LoanPaymentKind.OVERPAYMENT, startDate, endDate);
+        BigDecimal disbursements = loanPaymentRepository.sumPrincipal(user.getId(), LoanPaymentKind.DISBURSEMENT, startDate, endDate);
+        BigDecimal loanCosts = transactionRepository.getTotalExpensesBySystemCategory(user.getId(), SystemCategory.LOAN_COSTS, startDate, endDate);
+        BigDecimal subsidy = loanPaymentRepository.sumSubsidy(user.getId(), startDate, endDate);
 
         return MonthlyReportDTO.builder()
                 .month(month)
@@ -59,8 +68,15 @@ public class ReportService {
                 .expenses(expenses)
                 .transfersToSavings(transfersToSavings)
                 .transfersFromSavings(transfersFromSavings)
-                .netSavingsThisMonth(transfersToSavings.subtract(transfersFromSavings))
+                .netSavingsThisMonth(netSavings)
                 .monthlyBalance(income.subtract(expenses))
+                .loanPrincipalRepaid(principal)
+                .loanOverpayments(overpayments)
+                .loanDisbursements(disbursements)
+                .loanCosts(loanCosts)
+                .loanSubsidy(subsidy)
+                .totalOutflow(expenses.add(principal).add(overpayments))
+                .wealthBuilt(netSavings.add(principal).add(overpayments).subtract(disbursements))
                 .build();
     }
 
@@ -78,6 +94,13 @@ public class ReportService {
         BigDecimal currentInvestmentBalance = accountRepository.getTotalBalanceByType(user.getId(), AccountType.INVESTMENT);
         BigDecimal currentTotalBalance = accountRepository.getTotalBalance(user.getId());
         BalanceAtDateDTO historical = historicalBalanceService.calculate(user.getId(), endDate);
+        BigDecimal currentLiabilities = accountRepository.getTotalBalanceByType(user.getId(), AccountType.LOAN).negate();
+        BigDecimal currentProperty = accountRepository.getTotalBalanceByType(user.getId(), AccountType.PROPERTY);
+        LocalDate since = LocalDate.of(1, 1, 1);
+        BigDecimal totalPrincipal = loanPaymentRepository.sumPrincipal(user.getId(), LoanPaymentKind.INSTALLMENT, since, endDate);
+        BigDecimal totalOverpayments = loanPaymentRepository.sumPrincipal(user.getId(), LoanPaymentKind.OVERPAYMENT, since, endDate);
+        BigDecimal totalLoanCosts = transactionRepository.getTotalExpensesBySystemCategory(user.getId(), SystemCategory.LOAN_COSTS, since, endDate);
+        BigDecimal totalSubsidy = loanPaymentRepository.sumSubsidy(user.getId(), since, endDate);
 
         return CumulativeReportDTO.builder()
                 .month(month)
@@ -97,6 +120,17 @@ public class ReportService {
                 .totalBalanceAtDate(historical.totalBalance())
                 .savingsBalanceAtDate(historical.savingsBalance())
                 .investmentBalanceAtDate(historical.investmentBalance())
+                .currentAssets(currentTotalBalance.add(currentLiabilities))
+                .currentLiabilities(currentLiabilities)
+                .currentNetWorth(currentTotalBalance)
+                .liabilitiesAtDate(historical.liabilitiesBalance() == null ? BigDecimal.ZERO : historical.liabilitiesBalance().negate())
+                .currentPropertyValue(currentProperty)
+                .currentLiquidNetWorth(currentTotalBalance.add(currentLiabilities).subtract(currentProperty))
+                .propertyAtDate(historical.propertyBalance() == null ? BigDecimal.ZERO : historical.propertyBalance())
+                .totalLoanPrincipalRepaid(totalPrincipal.add(totalOverpayments))
+                .totalLoanOverpayments(totalOverpayments)
+                .totalLoanCosts(totalLoanCosts)
+                .totalLoanSubsidy(totalSubsidy)
                 .theoreticalNetIncome(
                         totalIncome.subtract(totalExpenses))
                 .build();

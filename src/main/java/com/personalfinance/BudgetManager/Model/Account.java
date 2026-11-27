@@ -50,9 +50,13 @@ public class Account extends AuditableEntity {
         return AccountType.isLiability(accountType);
     }
 
+    public boolean isProperty() {
+        return AccountType.isProperty(accountType);
+    }
+
     @PrePersist
     public void prePersist() {
-        if (this.balance == null) {
+        if (this.balance == null){
         }
     }
 }

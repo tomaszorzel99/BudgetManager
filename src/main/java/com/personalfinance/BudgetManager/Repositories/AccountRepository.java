@@ -59,8 +59,8 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     @Query("SELECT a FROM Account a WHERE a.group IN :groups AND a.deletedAt IS NOT NULL")
     List<Account> findArchivedByGroupIn(Set<UserGroup> groups);
 
-    @Query("SELECT DISTINCT a FROM Account a JOIN a.group g JOIN g.users u " +
-           "WHERE u.id = :userId AND a.createdAt < :before")
-    List<Account> findForHistoricalReport(@Param("userId") Long userId,
-                                          @Param("before")LocalDateTime before);
+    /** Konta do historii sald: wszystkie konta użytkownika; saldo na dzień liczy się z transakcji. */
+    @Query("SELECT DISTINCT a FROM Account a JOIN a.group g JOIN g.users u WHERE u.id = :userId")
+    List<Account> findForHistoricalReport(@Param("userId") Long userId);
 }
+

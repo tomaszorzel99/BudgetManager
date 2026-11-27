@@ -530,7 +530,7 @@
     const ACC_TYPES = {
         CHECKING:{n:'Rozliczeniowe',i:'bank',c:'b'}, CASH:{n:'Gotówka',i:'cash',c:'g'},
         SAVINGS:{n:'Oszczędności',i:'piggy',c:'a'}, INVESTMENT:{n:'Inwestycje',i:'trend',c:'v'},
-        LOAN:{n:'Kredyty',i:'scale',c:'r'},
+        PROPERTY:{n:'Nieruchomości',i:'home',c:'o'}, LOAN:{n:'Kredyty',i:'scale',c:'r'},
     };
     const TX_TYPES = {
         INCOME:{n:'Przychód',c:'g',sign:'+'}, EXPENSE:{n:'Wydatek',c:'r',sign:'−'},
@@ -580,8 +580,13 @@
         return `<option value="">— ${NO_SUB} —</option>` + subs.map(s=>`<option value="${s.id}" ${String(s.id)===String(selectedId)?'selected':''}>${esc(s.name)}</option>`).join('');
     }
     const isLoan = a => a?.accountType==='LOAN';
-    /** Konta, z których się płaci i na które się przelewa (bez kredytów). */
-    const spendAccs = () => S.accounts.filter(a=>!isLoan(a));
+    const isProperty = a => a?.accountType==='PROPERTY';
+    /** Konta, z których się płaci i na które się przelewa (bez kredytów i nieruchomości). */
+    const spendAccs = () => S.accounts.filter(a=>!isLoan(a) && !isProperty(a));
+    /** Wykres wartości netto: 'net' (z kredytami i nieruchomościami) albo 'liquid' (same pieniądze na kontach). */
+    function nwMode(){ try { return localStorage.getItem('bm.nwMode')==='liquid' ? 'liquid' : 'net'; } catch(e){ return 'net'; } }
+    function setNwMode(m){ try { localStorage.setItem('bm.nwMode', m); } catch(e){} }
+    const liquidOf = h => num(h.totalBalance) - num(h.liabilitiesBalance) - num(h.propertyBalance);
     function currencies(){ return [...new Set(S.accounts.map(a=>(a.currency||'PLN').toUpperCase()))]; }
     function pickMainCurrency(){
         const cs = currencies(); if(!cs.length) return 'PLN';
@@ -865,14 +870,17 @@
         const c = $('#content'); c.innerHTML = skeleton();
         const cur = {m:now.getMonth()+1, y:now.getFullYear()}, prev = shiftMonth(cur,-1);
         const soon = isoLocal(new Date(now.getFullYear(), now.getMonth(), now.getDate()+14));
-        const [txR, histR, budR, upR, goalR] = await Promise.allSettled([
+        const [txR, histR, budR, upR, goalR, moR] = await Promise.allSettled([
             loadAllTx(true),
             api('GET','/api/report/balance-history'+qs({month:cur.m, year:cur.y, months:12})),
             api('GET','/api/budgets'),
             api('GET','/api/recurring/upcoming'+qs({from:isoLocal(new Date(now.getFullYear(), now.getMonth()-2, 1)), to:soon})),
             api('GET','/api/goals'),
+            api('GET','/api/report/monthly'+qs({month:cur.m, year:cur.y})),
         ]);
         if (S.view!=='dashboard') return;
+        const mo = moR.status==='fulfilled' ? (moR.value||{}) : {};
+        const repaid = num(mo.loanPrincipalRepaid) + num(mo.loanOverpayments);
         const budgets = budR.status==='fulfilled' ? (budR.value||[]) : [];
         if (budR.status==='fulfilled'){ S.budgets = budgets; S.budgetAlerts = budgets.filter(b=>b.status==='EXCEEDED').length; S.budgetWarn = budgets.filter(b=>b.status==='WARNING').length; renderNav(); }
         const upcoming = upR.status==='fulfilled' ? (upR.value||[]) : [];
@@ -884,8 +892,9 @@
         const txs = inCur(allTx);
         const accs = S.accounts.filter(a=>(a.currency||'').toUpperCase()===S.currency);
         const net = accs.reduce((s,a)=>s+num(a.balance),0);
-        const avail = accs.filter(a=>a.availableForSpending && !isLoan(a)).reduce((s,a)=>s+num(a.balance),0);
+        const avail = accs.filter(a=>a.availableForSpending && !isLoan(a) && !isProperty(a)).reduce((s,a)=>s+num(a.balance),0);
         const liabs = accs.filter(isLoan).reduce((s,a)=>s+num(a.balance),0), assets = net - liabs;
+        const prop = accs.filter(isProperty).reduce((s,a)=>s+num(a.balance),0), liquid = assets - prop;
         const sumM = (ym,type)=>txs.filter(t=>t.type===type && ymKey(t.transactionDate)===`${ym.y}-${ym.m}`).reduce((s,t)=>s+num(t.amount),0);
         const inc = sumM(cur,'INCOME'), exp = sumM(cur,'EXPENSE'), incP = sumM(prev,'INCOME'), expP = sumM(prev,'EXPENSE');
         const delta = (a,b,good) => { if(!b) return `<span class="faint">brak danych z ${MONTHS_GEN[prev.m-1].replace(/a$/,'a')}</span>`;
@@ -904,22 +913,26 @@
         const recent = [...allTx].sort((a,b)=>String(b.transactionDate).localeCompare(String(a.transactionDate)) || b.id-a.id).slice(0,7);
         const byType = {}; accs.forEach(a=>{ byType[a.accountType]=(byType[a.accountType]||0)+num(a.balance); });
         const histCur = hist.filter(h=>!h.currency || h.currency.toUpperCase()===S.currency);
-        const histFirst = histCur.length ? num(histCur[0].totalBalance) : null;
+        const mode = (liabs || prop) ? nwMode() : 'net';
+        const nwVal = h => mode==='liquid' ? liquidOf(h) : num(h.totalBalance);
+        const nwNow = mode==='liquid' ? liquid : net;
+        const histFirst = histCur.length ? nwVal(histCur[0]) : null;
 
         const budShown = [...budgets].filter(b=>b.currency===S.currency).sort((a,b)=>num(b.percent)-num(a.percent)).slice(0,5);
         c.innerHTML = `
   ${exceeded.length?`<div class="alert r">${icon('alert')}<div class="grow"><b>Przekroczono ${exceeded.length===1?'budżet':'budżety'}:</b> ${exceeded.map(b=>`${esc(b.categoryName)} (o ${fmtMoney(-num(b.remaining),b.currency)})`).join(', ')}</div><a class="card-link" data-go="budgets" href="#budgets">Budżety ${icon('right')}</a></div>`:''}
   ${overdueN?`<div class="alert a">${icon('repeat')}<div class="grow"><b>${overdueN} ${overdueN===1?'płatność cykliczna czeka':'płatności cykliczne czekają'} na zaksięgowanie.</b></div><a class="card-link" data-go="recurring" href="#recurring">Przejdź ${icon('right')}</a></div>`:''}
   <div class="grid g-4 mb">
-    <div class="card kpi"><div class="lbl"><span class="ico o">${icon('wallet')}</span>Wartość netto</div><div class="val num">${fmtMoney(net)}</div><div class="delta">${liabs ? `aktywa ${fmtMoney(assets,null,{compact:true})} · kredyty ${fmtMoney(liabs,null,{compact:true})}` : `${accs.length} ${accs.length===1?'konto':'kont'} w ${S.currency}`}</div></div>
-    <div class="card kpi"><div class="lbl"><span class="ico b">${icon('cash')}</span>Dostępne do wydania</div><div class="val num">${fmtMoney(avail)}</div><div class="delta">${assets>0?Math.round(avail/assets*100):0}% aktywów</div></div>
+    <div class="card kpi"><div class="lbl"><span class="ico o">${icon('wallet')}</span>Wartość netto</div><div class="val num">${fmtMoney(net)}</div><div class="delta">${liabs||prop ? `${prop?`nieruchomości ${fmtMoney(prop,null,{compact:true})} · `:''}płynne ${fmtMoney(liquid,null,{compact:true})}${liabs?` · kredyty ${fmtMoney(liabs,null,{compact:true})}`:''}` : `${accs.length} ${accs.length===1?'konto':'kont'} w ${S.currency}`}</div></div>
+    <div class="card kpi"><div class="lbl"><span class="ico b">${icon('cash')}</span>Dostępne do wydania</div><div class="val num">${fmtMoney(avail)}</div><div class="delta">${liquid>0?Math.round(avail/liquid*100):0}% ${prop?'majątku płynnego':'aktywów'}</div></div>
     <div class="card kpi"><div class="lbl"><span class="ico g">${icon('up')}</span>Przychody · ${MONTHS[cur.m-1].toLowerCase()}</div><div class="val num pos">${fmtMoney(inc)}</div><div class="delta">${delta(inc,incP,'up')}</div></div>
-    <div class="card kpi"><div class="lbl"><span class="ico r">${icon('down')}</span>Wydatki · ${MONTHS[cur.m-1].toLowerCase()}</div><div class="val num neg">${fmtMoney(exp)}</div><div class="delta">${delta(exp,expP,'down')}</div></div>
+    <div class="card kpi"><div class="lbl"><span class="ico r">${icon('down')}</span>Wydatki · ${MONTHS[cur.m-1].toLowerCase()}</div><div class="val num neg">${fmtMoney(exp)}</div><div class="delta">${delta(exp,expP,'down')}</div>${repaid?`<div class="delta" title="Kapitał to nie wydatek: zmniejsza dług">+ spłata kapitału ${fmtMoney(repaid,null,{compact:true})}</div>`:''}</div>
   </div>
 
   <div class="grid g-main mb">
     <div class="card" style="display:flex;flex-direction:column">
-      <div class="card-h"><h3>Wartość netto w czasie</h3>${histFirst!==null?`<span class="chip ${net-histFirst>=0?'g':'r'}">${net-histFirst>=0?'+':''}${fmtMoney(net-histFirst)} w 12 mies.</span>`:''}</div>
+      <div class="card-h" style="flex-wrap:wrap;gap:8px"><h3>${mode==='liquid'?'Majątek płynny':'Wartość netto'} w czasie</h3>${histFirst!==null?`<span class="chip ${nwNow-histFirst>=0?'g':'r'}">${nwNow-histFirst>=0?'+':''}${fmtMoney(nwNow-histFirst)} w 12 mies.</span>`:''}
+        ${liabs||prop?`<div class="seg" id="nw-mode" style="margin-left:auto" title="Majątek płynny: same pieniądze na kontach, bez kredytów i nieruchomości"><button type="button" data-k="net" class="${mode==='net'?'on':''}">Netto</button><button type="button" data-k="liquid" class="${mode==='liquid'?'on':''}">Płynny</button></div>`:''}</div>
       <div class="card-b" style="flex:1;display:flex;flex-direction:column"><div class="chart-box" id="nw-box" style="flex:1;min-height:260px"><canvas id="c-nw"></canvas></div></div>
     </div>
     <div class="card">
@@ -951,7 +964,7 @@
     <div class="card">
       <div class="card-h"><h3>Konta</h3><a class="card-link" data-go="accounts" href="#accounts">Zarządzaj ${icon('right')}</a></div>
       <div class="card-b" style="padding-bottom:8px">
-        ${accs.length ? `<div class="stack-bar">${Object.keys(ACC_TYPES).filter(k=>byType[k]>0).map(k=>`<span style="flex:${byType[k]};background:var(--${{b:'blue',g:'green',a:'amber',v:'violet'}[ACC_TYPES[k].c]})"></span>`).join('')}</div>` : ''}
+        ${accs.length ? `<div class="stack-bar">${Object.keys(ACC_TYPES).filter(k=>byType[k]>0).map(k=>`<span style="flex:${byType[k]};background:var(--${{b:'blue',g:'green',a:'amber',v:'violet',o:'accent'}[ACC_TYPES[k].c]})"></span>`).join('')}</div>` : ''}
       </div>
       <div class="list" style="padding-bottom:8px">${S.accounts.length ? S.accounts.slice().sort((a,b)=>num(b.balance)-num(a.balance)).slice(0,6).map(a=>`
         <div class="li"><span class="cat-ico ico ${ACC_TYPES[a.accountType]?.c||'b'}">${icon(ACC_TYPES[a.accountType]?.i||'wallet')}</span>
@@ -971,12 +984,13 @@
             const accent = cssVar('--accent');
             const labels = histCur.map(h=>{ const d=parseDate(h.balanceDate); return d?`${MSHORT[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`:''; });
             const cv = $('#c-nw');
-            mkChart('nw', cv, {type:'line', data:{labels, datasets:[{label:'Wartość netto', data:histCur.map(h=>num(h.totalBalance)), borderColor:accent, borderWidth:2.5, tension:.35, fill:true, backgroundColor:lineGradient(cv.getContext('2d'),accent), pointRadius:0, pointHoverRadius:5, pointBackgroundColor:accent}]},
+            mkChart('nw', cv, {type:'line', data:{labels, datasets:[{label:mode==='liquid'?'Majątek płynny':'Wartość netto', data:histCur.map(nwVal), borderColor:accent, borderWidth:2.5, tension:.35, fill:true, backgroundColor:lineGradient(cv.getContext('2d'),accent), pointRadius:0, pointHoverRadius:5, pointBackgroundColor:accent}]},
                 options:{responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false}, plugins:{legend:{display:false}, tooltip:{...tooltipStyle(), callbacks:{label:c=>' '+fmtMoney(c.raw)}}},
                     scales:{x:{grid:{display:false}}, y:{grid:{color:cssVar('--border')}, border:{display:false}, ticks:{callback:v=>fmtCompact(v)}}}}});
         } else {
             $('#nw-box').innerHTML = emptyState('chart','Brak historii sald', histR.status==='rejected' ? esc(histR.reason.message) : 'Historia pojawi się po dodaniu kont i transakcji.');
         }
+        $$('#nw-mode button').forEach(b=>b.onclick=()=>{ setNwMode(b.dataset.k); rerender(); });
         if (catRows.length) drillDonut('d-cat', 'cat', txs.filter(t=>ymKey(t.transactionDate)===`${cur.y}-${cur.m}`), {height:180, legendMax:5});
         cashflowChart('cf', $('#c-cf'), monthlySeries(txs, cur, 6));
         if (txR.status==='rejected') toast(txR.reason.message,'err');
@@ -987,7 +1001,7 @@
         const acc = accById(t.accountId);
         return `<div class="li hov"><span class="cat-ico" style="background:${hexA(col,.14)};color:${col}">${esc(initials(t.categoryName).slice(0,1))}</span>
     <div class="main-t"><div class="t1">${esc(t.description || t.subcategoryName || t.categoryName)}</div><div class="t2">${esc(t.categoryName)}${t.subcategoryName?' · '+esc(t.subcategoryName):''} · ${fmtDate(t.transactionDate)}</div></div>
-    <div class="amt num ${signed(t)<0?'':'pos'}">${signed(t)<0?'−':'+'}${fmtMoney(t.amount, acc?.currency)}</div></div>`;
+    <div class="amt num ${signed(t)<0?'':'pos'}">${signed(t)<0?'−':'+'}${fmtMoney(Math.abs(num(t.amount)), acc?.currency)}</div></div>`;
     }
 
     /* =========================================================
@@ -1051,15 +1065,17 @@
             const tot = g.items.reduce((s,t)=>s+signed(t),0);
             return `<div class="day-h"><span>${fmtDayHeader(g.day)}</span><span class="num">${tot>=0?'+':''}${fmtMoney(tot, accCur(g.items[0].accountId))}</span></div>` + g.items.map(t=>{
                 const tt = TX_TYPES[t.type]||{n:t.type,c:'n'}, col = catColor(t.categoryName), cu = accCur(t.accountId);
-                const locked = t.type==='INITIAL_BALANCE';
+                const locked = t.type==='INITIAL_BALANCE' || t.type==='LIABILITY_OPENING';
+                const valuation = isProperty(accById(t.accountId)); // wycenę zmienia się nową wyceną, nie edycją
+
                 return `<div class="tx-row">
         <div class="tx-who"><span class="cat-ico" style="background:${hexA(col,.14)};color:${col}">${esc(initials(t.categoryName).slice(0,1))}</span>
           <div style="min-width:0"><div class="t1" style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.description || t.subcategoryName || t.categoryName)}</div>
           <div class="faint" style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.type!=='INCOME'&&t.type!=='EXPENSE'?`<span class="chip ${tt.c}" style="padding:0 6px;font-size:11px">${tt.n}</span> `:''}${esc(t.userName||'')}</div></div></div>
         <div class="c-cat"><span class="pill"><span class="dot" style="background:${col}"></span>${esc(t.categoryName)}${t.subcategoryName?` <span class="faint">/ ${esc(t.subcategoryName)}</span>`:''}</span></div>
         <div class="c-acc muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.accountName)}</div>
-        <div class="num" style="text-align:right;font-weight:600"><span class="${signed(t)<0?'':'pos'}">${signed(t)<0?'−':'+'}${fmtMoney(t.amount,cu)}</span></div>
-        <div class="acts">${locked?'':`${t.type==='INCOME'||t.type==='EXPENSE'?`<button class="icon-btn" title="Ustaw jako cykliczną" onclick="recurringFromTx(${t.id})">${icon('repeat')}</button>`:''}<button class="icon-btn" title="Edytuj" onclick="txModal(${t.id})">${icon('edit')}</button><button class="icon-btn danger" title="Usuń" onclick="deleteTx(${t.id})">${icon('trash')}</button>`}</div>
+        <div class="num" style="text-align:right;font-weight:600"><span class="${signed(t)<0?'':'pos'}">${signed(t)<0?'−':'+'}${fmtMoney(Math.abs(num(t.amount)),cu)}</span></div>
+        <div class="acts">${locked?'':`${t.type==='INCOME'||t.type==='EXPENSE'?`<button class="icon-btn" title="Ustaw jako cykliczną" onclick="recurringFromTx(${t.id})">${icon('repeat')}</button>`:''}${valuation?'':`<button class="icon-btn" title="Edytuj" onclick="txModal(${t.id})">${icon('edit')}</button>`}<button class="icon-btn danger" title="Usuń" onclick="deleteTx(${t.id})">${icon('trash')}</button>`}</div>
       </div>`; }).join('');
         }).join('');
         box.innerHTML = html;
@@ -1232,15 +1248,19 @@
         const byCurType = {};
         S.accounts.forEach(a=>{ const cu=(a.currency||'').toUpperCase(); if(cu!==S.currency) return; byCurType[a.accountType]=(byCurType[a.accountType]||0)+num(a.balance); });
         const total = Object.entries(byCurType).filter(([k])=>k!=='LOAN').reduce((a,[,b])=>a+b,0);
-        const debt = byCurType.LOAN || 0;
-        let html = `<div class="grid g-4 mb">${Object.entries(ACC_TYPES).filter(([k])=>k!=='LOAN').map(([k,t])=>`
+        const debt = byCurType.LOAN || 0, prop = byCurType.PROPERTY || 0;
+        const hasProp = S.accounts.some(isProperty);
+        // Kafelki: tylko konta płynne; nieruchomości i kredyty są w podsumowaniu niżej.
+        const liquidTotal = total - prop;
+        let html = `<div class="grid g-4 mb">${Object.entries(ACC_TYPES).filter(([k])=>k!=='LOAN' && k!=='PROPERTY').map(([k,t])=>`
     <div class="card kpi"><div class="lbl"><span class="ico ${t.c}">${icon(t.i)}</span>${t.n}</div><div class="val num">${fmtMoney(byCurType[k]||0)}</div>
-    <div class="delta">${total?Math.round((byCurType[k]||0)/total*100):0}% aktywów</div></div>`).join('')}</div>`;
-        if (debt) html += `<div class="card card-b mb" style="display:flex;gap:24px;flex-wrap:wrap;align-items:center">
+    <div class="delta">${liquidTotal?Math.round((byCurType[k]||0)/liquidTotal*100):0}% ${hasProp?'majątku płynnego':'aktywów'}</div></div>`).join('')}</div>`;
+        if (debt || prop) html += `<div class="card card-b mb" style="display:flex;gap:24px;flex-wrap:wrap;align-items:center">
       <div><div class="faint">Aktywa</div><b class="num" style="font-size:18px">${fmtMoney(total)}</b></div>
+      ${prop?`<div><div class="faint">w tym nieruchomości</div><b class="num" style="font-size:18px">${fmtMoney(prop)}</b></div><div><div class="faint">Majątek płynny</div><b class="num" style="font-size:18px">${fmtMoney(total-prop)}</b></div>`:''}
       <div><div class="faint">Kredyty</div><b class="num neg" style="font-size:18px">${fmtMoney(debt)}</b></div>
       <div><div class="faint">Wartość netto</div><b class="num" style="font-size:18px">${fmtMoney(total+debt)}</b></div>
-      <a class="card-link" data-go="loans" href="#loans" style="margin-left:auto">Szczegóły kredytów ${icon('right')}</a></div>`;
+      ${debt?`<a class="card-link" data-go="loans" href="#loans" style="margin-left:auto">Szczegóły kredytów ${icon('right')}</a>`:''}</div>`;
         const byType = {};
         S.accounts.forEach(a=>(byType[a.accountType]=byType[a.accountType]||[]).push(a));
         html += Object.keys(ACC_TYPES).filter(k=>byType[k]).map(k=>{
@@ -1259,10 +1279,10 @@
         const users = a.users||[];
         return `<div class="acc-row">
     <div style="flex:1;min-width:0;cursor:pointer" onclick="accountHistoryModal(${a.id})" title="Historia salda"><div style="font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${esc(a.name)} ${a.availableForSpending?'<span class="chip g">do wydania</span>':''}</div>
-      <div class="faint" style="font-size:12.5px">${esc(a.groupName||'')} · ${esc((a.currency||'').toUpperCase())}${a.updatedAt?' · zaktualizowano '+fmtDate(a.updatedAt):''}</div></div>
+            <div class="faint" style="font-size:12.5px">${esc(a.groupName||'')} · ${esc((a.currency||'').toUpperCase())}${a.updatedAt?' · zaktualizowano '+fmtDate(a.updatedAt):''}</div></div>
     <div class="avatars" title="${esc(users.join(', '))}">${users.slice(0,4).map(u=>`<span class="avatar sm" style="background:${avatarColor(u)}">${esc(initials(u))}</span>`).join('')}</div>
     <b class="num" style="min-width:120px;text-align:right;font-size:15px">${fmtMoney(a.balance,a.currency)}</b>
-    <div class="acts"><button class="icon-btn" title="Historia salda" onclick="accountHistoryModal(${a.id})">${icon('history')}</button><button class="icon-btn" title="Edytuj" onclick="accountModal(${a.id})">${icon('edit')}</button>${isLoan(a)?'':`<button class="icon-btn" title="Korekta salda" onclick="adjustModal(${a.id})">${icon('scale')}</button>`}<button class="icon-btn" title="Archiwizuj" onclick="archiveAccount(${a.id})">${icon('archive')}</button><button class="icon-btn danger" title="Usuń" onclick="deleteAccount(${a.id})">${icon('trash')}</button></div>
+    <div class="acts"><button class="icon-btn" title="Historia salda" onclick="accountHistoryModal(${a.id})">${icon('history')}</button><button class="icon-btn" title="Edytuj" onclick="accountModal(${a.id})">${icon('edit')}</button>${isLoan(a)?'':isProperty(a)?`<button class="icon-btn" title="Nowa wycena" onclick="propertyValueModal(${a.id})">${icon('home')}</button>`:`<button class="icon-btn" title="Korekta salda" onclick="adjustModal(${a.id})">${icon('scale')}</button>`}<button class="icon-btn" title="Archiwizuj" onclick="archiveAccount(${a.id})">${icon('archive')}</button><button class="icon-btn danger" title="Usuń" onclick="deleteAccount(${a.id})">${icon('trash')}</button></div>
   </div>`;
     }
     async function editLoanOfAccount(accountId){
@@ -1277,29 +1297,55 @@
         if (!ed && !groups.length){ toast('Najpierw utwórz grupę','err'); return groupModal(); }
         const m = openModal({title: ed?'Edytuj konto':'Nowe konto', body:`
     <div class="field"><label>Nazwa konta</label><input class="input" id="ac-name" value="${esc(ed?.name||'')}" placeholder="np. mBank osobiste"></div>
-    <div class="field"><label>Typ</label><div class="seg" id="ac-type">${Object.entries(ACC_TYPES).filter(([k])=>k!=='LOAN').map(([k,t])=>`<button type="button" data-k="${k}">${t.n}</button>`).join('')}</div></div>
+    <div class="field"><label>Typ</label><div class="seg" id="ac-type" style="flex-wrap:wrap">${Object.entries(ACC_TYPES).filter(([k])=>k!=='LOAN').map(([k,t])=>`<button type="button" data-k="${k}">${t.n}</button>`).join('')}</div></div>
     ${ed?'':`<div class="row">
-      <div class="field"><label>Saldo początkowe</label><input class="input num" type="number" min="0" step="0.01" id="ac-bal" placeholder="0,00"></div>
+      <div class="field"><label id="ac-bal-l">Saldo początkowe</label><input class="input num" type="number" min="0" step="0.01" id="ac-bal" placeholder="0,00"></div>
+      <div class="field"><label>Na dzień</label><input class="input" type="date" id="ac-date" value="${isoLocal()}" max="${isoLocal()}"></div>
       <div class="field"><label>Waluta</label><input class="input" id="ac-cur" value="PLN" maxlength="3" style="text-transform:uppercase" list="cur-list"><datalist id="cur-list"><option>PLN</option><option>EUR</option><option>USD</option><option>GBP</option><option>CHF</option></datalist></div>
     </div>
     <div class="field"><label>Grupa</label><select class="input" id="ac-group">${groups.map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join('')}</select><span class="hint">Konto będzie widoczne dla wszystkich członków grupy.</span></div>`}
-    <label class="switch"><div><b style="font-weight:600">Dostępne do wydania</b><div class="hint">Wliczaj saldo do kwoty „dostępne do wydania”.</div></div><input type="checkbox" id="ac-sp" ${ed?(ed.availableForSpending?'checked':''):'checked'}></label>
+    <label class="switch" id="ac-sp-row"><div><b style="font-weight:600">Dostępne do wydania</b><div class="hint">Wliczaj saldo do kwoty „dostępne do wydania”.</div></div><input type="checkbox" id="ac-sp" ${ed?(ed.availableForSpending?'checked':''):'checked'}></label>
+    <div class="note hidden" id="ac-prop-note">Nieruchomość to aktywo, nie konto do płacenia. Wpisz jej szacowaną wartość. Jeśli kupiłeś ją na kredyt, ustaw tę samą datę co saldo kredytu, a wartość netto nie zrobi skoku. Później aktualizujesz ją przyciskiem „Nowa wycena”.</div>
     ${ed?'<div class="note">Saldo zmienisz transakcją albo korektą salda, a walutę tylko na koncie bez historii.</div>':''}`,
             footer:`<button class="btn btn-ghost" data-close>Anuluj</button><button class="btn btn-primary" id="ac-save">${ed?'Zapisz zmiany':'Utwórz konto'}</button>`});
         let type = ed?.accountType || 'CHECKING';
-        const setT = k=>{ type=k; $$('#ac-type button',m).forEach(b=>b.classList.toggle('on',b.dataset.k===k)); };
+        const setT = k=>{ type=k; $$('#ac-type button',m).forEach(b=>b.classList.toggle('on',b.dataset.k===k));
+            const pr = k==='PROPERTY'; $('#ac-sp-row',m).classList.toggle('hidden',pr); $('#ac-prop-note',m).classList.toggle('hidden',!pr);
+            if ($('#ac-bal-l',m)) $('#ac-bal-l',m).textContent = pr ? 'Wartość' : 'Saldo początkowe'; };
         $$('#ac-type button',m).forEach(b=>b.onclick=()=>{ setT(b.dataset.k); if(!ed) $('#ac-sp',m).checked = (b.dataset.k==='CHECKING'||b.dataset.k==='CASH'); });
         setT(type);
         $('#ac-save',m).onclick = e=>withBtn(e.currentTarget, async ()=>{
             const name = $('#ac-name',m).value.trim(); if(!name) return toast('Podaj nazwę konta','err');
             try {
-                if (ed) await api('PATCH','/api/accounts/'+ed.id,{name, accountType:type, availableForSpending:$('#ac-sp',m).checked});
+                const sp = type!=='PROPERTY' && $('#ac-sp',m).checked;
+                if (ed) await api('PATCH','/api/accounts/'+ed.id,{name, accountType:type, availableForSpending:sp});
                 else {
                     const currency = $('#ac-cur',m).value.trim().toUpperCase()||'PLN';
                     if (!/^[A-Z]{3}$/.test(currency)) return toast('Waluta to trzyliterowy kod, np. PLN','err');
-                    await api('POST','/api/accounts',{name, accountType:type, currency, initialBalance:num($('#ac-bal',m).value), availableForSpending:$('#ac-sp',m).checked, groupId:+$('#ac-group',m).value});
+                    await api('POST','/api/accounts',{name, accountType:type, currency, initialBalance:num($('#ac-bal',m).value), initialBalanceDate:$('#ac-date',m).value||null, availableForSpending:sp, groupId:+$('#ac-group',m).value});
                 }
                 toast(ed?'Konto zaktualizowane':'Konto utworzone'); closeModal(); await refreshAccounts(); rerender();
+            } catch(err){ toast(err.message,'err'); }
+        });
+    }
+    function propertyValueModal(id){
+        const a = accById(id); if(!a) return;
+        const m = openModal({title:'Nowa wycena', body:`
+    <p class="muted" style="margin-bottom:14px">Wpisz aktualną wartość nieruchomości <b>${esc(a.name)}</b>. Różnica zapisze się jako korekta wyceny: zmienia wartość netto, ale nie jest przychodem ani wydatkiem.</p>
+    <div class="field"><label>Obecna wartość w aplikacji</label><input class="input num" disabled value="${fmtMoney(a.balance,a.currency)}"></div>
+    <div class="row"><div class="field amount-input"><label>Nowa wartość</label><input class="input num" type="number" min="0" step="0.01" id="pv-val" placeholder="0,00"><span>${esc(a.currency)}</span></div>
+      <div class="field"><label>Na dzień</label><input class="input" type="date" id="pv-date" value="${isoLocal()}" max="${isoLocal()}"></div></div>
+    <div class="field"><label>Opis</label><input class="input" id="pv-desc" maxlength="255" placeholder="np. wycena z operatu, ceny ofertowe w okolicy"></div>
+    <div class="fx-preview hidden" id="pv-diff"></div>`,
+            footer:`<button class="btn btn-ghost" data-close>Anuluj</button><button class="btn btn-primary" id="pv-save">Zapisz wycenę</button>`});
+        $('#pv-val',m).oninput = ()=>{ const v=$('#pv-val',m).value, d=num(v)-num(a.balance), box=$('#pv-diff',m);
+            if (v==='' || !d){ box.classList.add('hidden'); return; }
+            box.classList.remove('hidden'); box.innerHTML = `Zmiana wartości: <b class="num ${d>=0?'pos':'neg'}">${d>=0?'+':'−'}${fmtMoney(Math.abs(d),a.currency)}</b>`; };
+        $('#pv-save',m).onclick = e=>withBtn(e.currentTarget, async ()=>{
+            const v = $('#pv-val',m).value; if (v==='' || num(v)<0) return toast('Podaj wartość nieruchomości','err');
+            try {
+                await api('POST',`/api/accounts/${a.id}/value`,{value:num(v), date:$('#pv-date',m).value||null, description:$('#pv-desc',m).value.trim()||null});
+                toast('Wycena zapisana'); closeModal(); await refreshAccounts(); rerender();
             } catch(err){ toast(err.message,'err'); }
         });
     }
@@ -1420,9 +1466,16 @@
     <div class="grid g-4 mb">
       <div class="card kpi"><div class="lbl"><span class="ico g">${icon('up')}</span>Przychody</div><div class="val num pos">${fmtMoney(inc)}</div><div class="delta">${mtx.filter(t=>t.type==='INCOME').length} transakcji</div></div>
       <div class="card kpi"><div class="lbl"><span class="ico r">${icon('down')}</span>Wydatki</div><div class="val num neg">${fmtMoney(exp)}</div><div class="delta">${mtx.filter(t=>t.type==='EXPENSE').length} transakcji</div></div>
-      <div class="card kpi"><div class="lbl"><span class="ico o">${icon('scale')}</span>Bilans miesiąca</div><div class="val num ${inc-exp>=0?'pos':'neg'}">${fmtMoney(inc-exp)}</div><div class="delta"><span class="chip ${savRate>=0?'g':'r'}">${savRate}%</span> stopa oszczędności</div></div>
+            <div class="card kpi"><div class="lbl"><span class="ico o">${icon('scale')}</span>Bilans miesiąca</div><div class="val num ${inc-exp>=0?'pos':'neg'}">${fmtMoney(inc-exp)}</div><div class="delta"><span class="chip ${savRate>=0?'g':'r'}">${savRate}%</span> stopa oszczędności</div></div>
       <div class="card kpi"><div class="lbl"><span class="ico a">${icon('piggy')}</span>Na oszczędności</div><div class="val num">${fmtMoney(toSav-fromSav)}</div><div class="delta">wpłaty ${fmtMoney(toSav,null,{compact:true})} · wypłaty ${fmtMoney(fromSav,null,{compact:true})}</div></div>
     </div>
+    ${(()=>{ const pr=num(mo.loanPrincipalRepaid), ov=num(mo.loanOverpayments), lc=num(mo.loanCosts), sb=num(mo.loanSubsidy), ds=num(mo.loanDisbursements);
+            if (!(pr||ov||lc||sb||ds)) return '';
+            return `<div class="card mb"><div class="card-h"><h3>Kredyty w tym miesiącu</h3><span class="faint">kapitał to nie wydatek: pokazujemy go obok</span></div><div class="card-b"><div class="legend">
+        ${[['Spłata kapitału (raty)',pr,''],['Nadpłaty',ov,''],['Koszty kredytu (w wydatkach)',lc,'neg'],...(sb?[['Dopłata państwa',sb,'pos']]:[]),...(ds?[['Wypłaty z kredytu',ds,'']]:[]),
+                ['Wypływ łącznie (wydatki + kapitał)',mo.totalOutflow,''],['Odłożone i spłacone',mo.wealthBuilt,'pos']]
+                .map(([n,v,cl])=>`<div class="legend-i"><span class="n muted">${n}</span><b class="num ${cl}">${fmtMoney(v, cu.balanceCurrency)}</b></div>`).join('')}
+        </div></div></div>`; })()}
     <div class="card mb"><div class="card-h"><h3>Przychody i wydatki</h3><span class="faint">12 miesięcy do ${MONTHS_GEN[ym.m-1]} ${ym.y}</span></div><div class="card-b"><div class="chart-box"><canvas id="r-cf"></canvas></div></div></div>
     <div class="grid g-2 mb">
       <div class="card"><div class="card-h"><h3>Wydatki wg kategorii</h3><b class="num">${fmtMoney(exp)}</b></div><div class="card-b">
@@ -1434,7 +1487,9 @@
       <div class="card"><div class="card-h"><h3>Podsumowanie narastające</h3></div><div class="card-b">${rep ? `
         <div class="legend">
           ${[['Przychody łącznie',cu.totalIncome,'pos'],['Wydatki łącznie',cu.totalExpense,'neg'],['Dochód netto',cu.theoreticalNetIncome,''],['Netto na oszczędności',cu.netTransfersToSavings,''],
-                ['Saldo łączne (dziś)',cu.currentTotalBalance,''],['Dostępne do wydania',cu.currentAvailableBalance,''],['Oszczędności',cu.currentSavingsBalance,''],['Inwestycje',cu.currentInvestmentBalance,'']]
+                ...(num(cu.currentLiabilities)||num(cu.totalLoanPrincipalRepaid)||num(cu.currentPropertyValue) ? [['Aktywa (dziś)',cu.currentAssets,''],...(num(cu.currentPropertyValue)?[['w tym nieruchomości',cu.currentPropertyValue,'']]:[]),['Kredyty (dziś)',-num(cu.currentLiabilities),'neg']] : []),
+                [num(cu.currentLiabilities)||num(cu.currentPropertyValue)?'Wartość netto (dziś)':'Saldo łączne (dziś)',cu.currentTotalBalance,''],...(num(cu.currentPropertyValue)?[['Majątek płynny (dziś)',cu.currentLiquidNetWorth,'']]:[]),['Dostępne do wydania',cu.currentAvailableBalance,''],['Oszczędności',cu.currentSavingsBalance,''],['Inwestycje',cu.currentInvestmentBalance,''],
+                ...(num(cu.totalLoanPrincipalRepaid)||num(cu.totalLoanCosts) ? [['Spłacony kapitał kredytów',cu.totalLoanPrincipalRepaid,'pos'],['w tym nadpłaty',cu.totalLoanOverpayments,''],['Koszty kredytów',cu.totalLoanCosts,'neg'],...(num(cu.totalLoanSubsidy)?[['Dopłaty państwa',cu.totalLoanSubsidy,'pos']]:[])] : [])]
                 .map(([n,v,cl])=>`<div class="legend-i"><span class="n muted">${n}</span><b class="num ${cl}">${fmtMoney(v, cu.balanceCurrency)}</b></div>`).join('')}
         </div><p class="hint" style="margin-top:14px">Dane z serwera (${esc(cu.balanceCurrency||'wszystkie waluty')}). Kwoty sumowane są po Twoich transakcjach.</p>`
             : emptyState('chart','Raport niedostępny', repR.status==='rejected'?esc(repR.reason.message):'')}</div></div>
@@ -1443,11 +1498,13 @@
         if (expB.length) drillDonut('r-exp-dd', 'rexp', mtx, {legend:false, height:200});
         if (hist.length){
             const labels = hist.map(h=>{ const d=parseDate(h.balanceDate); return d?`${MSHORT[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`:''; });
-            const sav = hist.map(h=>num(h.savingsBalance)), inv = hist.map(h=>num(h.investmentBalance)), rest = hist.map((h,i)=>num(h.totalBalance)-sav[i]-inv[i]);
+            const sav = hist.map(h=>num(h.savingsBalance)), inv = hist.map(h=>num(h.investmentBalance)), liab = hist.map(h=>num(h.liabilitiesBalance)), prop = hist.map(h=>num(h.propertyBalance)), rest = hist.map((h,i)=>num(h.totalBalance)-sav[i]-inv[i]-liab[i]-prop[i]);
             mkChart('rhist', $('#r-hist'), {type:'bar', data:{labels, datasets:[
                         {label:'Bieżące', data:rest, backgroundColor:cssVar('--blue'), borderRadius:4, maxBarThickness:28},
                         {label:'Oszczędności', data:sav, backgroundColor:cssVar('--amber'), borderRadius:4, maxBarThickness:28},
-                        {label:'Inwestycje', data:inv, backgroundColor:cssVar('--violet'), borderRadius:4, maxBarThickness:28}]},
+                        {label:'Inwestycje', data:inv, backgroundColor:cssVar('--violet'), borderRadius:4, maxBarThickness:28},
+                        ...(prop.some(x=>x) ? [{label:'Nieruchomości', data:prop, backgroundColor:cssVar('--accent'), borderRadius:4, maxBarThickness:28}] : []),
+                        ...(liab.some(x=>x) ? [{label:'Kredyty', data:liab, backgroundColor:cssVar('--red'), borderRadius:4, maxBarThickness:28}] : [])]},
                 options:{responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
                     plugins:{legend:{position:'bottom', labels:{usePointStyle:true, pointStyle:'circle', boxWidth:8, boxHeight:8, padding:16}}, tooltip:{...tooltipStyle(), callbacks:{label:c=>` ${c.dataset.label}: ${fmtMoney(c.raw)}`, footer:it=>'Razem: '+fmtMoney(it.reduce((a,c)=>a+c.raw,0))}}},
                     scales:{x:{stacked:true, grid:{display:false}}, y:{stacked:true, grid:{color:cssVar('--border')}, border:{display:false}, ticks:{callback:v=>fmtCompact(v)}}}}});
@@ -2076,10 +2133,10 @@
         c.innerHTML = `<div class="grid g-3 mb">
       <div class="card kpi"><div class="lbl"><span class="ico r">${icon('scale')}</span>Pozostało do spłaty</div><div class="val num">${sumTxt('out')}</div><div class="delta">${n} ${n===1?'kredyt':(n<5?'kredyty':'kredytów')}</div></div>
       <div class="card kpi"><div class="lbl"><span class="ico g">${icon('check')}</span>Spłacony kapitał</div><div class="val num pos">${sumTxt('rep')}</div><div class="delta">od uruchomienia kredytów</div></div>
-      <div class="card kpi"><div class="lbl"><span class="ico a">${icon('calendar')}</span>Najbliższa rata</div><div class="val">${next?fmtDate(next.nextPaymentDate):'—'}</div><div class="delta">${next?esc(next.name):'brak'}</div></div>
+                  <div class="card kpi"><div class="lbl"><span class="ico a">${icon('calendar')}</span>Najbliższa rata</div><div class="val">${next?fmtDate(next.nextPaymentDate):'—'}</div><div class="delta">${next?esc(next.name):'brak'}</div></div>
     </div>
     ${loans.map(loanCard).join('')}
-    <div class="note">Zapisywanie rat i nadpłat z podziałem na kapitał i odsetki dojdzie w kolejnym etapie. Spłacony kredyt (saldo 0) zarchiwizujesz w zakładce Konta.</div>`;
+    <div class="note">Rata dzieli się na spłatę kapitału (przelew na kredyt) i odsetki (wydatek w kategorii „Kredyty i pożyczki”). Dopłata państwa nie schodzi z konta i nie jest wydatkiem. Spłacony kredyt (saldo 0) zarchiwizujesz w zakładce Konta. Kredyt na mieszkanie? Dodaj w zakładce Konta konto typu „Nieruchomości” z wartością mieszkania i tą samą datą co saldo kredytu, a wartość netto pokaże mieszkanie minus dług zamiast samego długu.</div>`;
     }
     function loanCard(l){
         const p = Math.min(num(l.percentRepaid), 100);
@@ -2091,15 +2148,30 @@
             ['Po nadpłacie domyślnie', (STRAT_N[l.overpaymentStrategy]||l.overpaymentStrategy).toLowerCase()],
             ['Konto spłaty', l.defaultPaymentAccountName ? esc(l.defaultPaymentAccountName) : '—'],
         ];
+        if (l.subsidizedRate!=null) info.splice(1, 0, ['Po dopłacie płacisz', `${pct(l.subsidizedRate)}%${l.subsidyEndDate?' do '+fmtDate(l.subsidyEndDate):''}`]);
+        const stats = num(l.paymentsCount) ? [
+            ['Spłacony kapitał z rat', fmtMoney(l.installmentPrincipalPaid,l.currency)],
+            ['Nadpłacono', fmtMoney(l.overpaidPrincipal,l.currency)],
+            ['Odsetki zapłacone przez Ciebie', fmtMoney(l.interestPaid,l.currency)],
+            ...(num(l.subsidyReceived) ? [['Dopłata państwa', fmtMoney(l.subsidyReceived,l.currency)]] : []),
+            ...(num(l.feesPaid) ? [['Opłaty', fmtMoney(l.feesPaid,l.currency)]] : []),
+            ['Ostatnia spłata', fmtDate(l.lastPaymentDate)],
+        ] : [];
+        const paidOff = num(l.outstandingPrincipal)===0;
         return `<div class="card mb"><div class="card-h"><h3>${esc(l.name)}</h3><span class="faint">${esc([l.lender, l.groupName].filter(Boolean).join(' · '))}</span></div>
     <div class="card-b">
       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px">
         <div><span class="faint">Pozostało</span> <b class="num" style="font-size:20px">${fmtMoney(l.outstandingPrincipal,l.currency)}</b> <span class="faint">z ${fmtMoney(l.originalPrincipal,l.currency)}</span></div>
         <span class="chip g">spłacono ${num(l.percentRepaid).toLocaleString('pl-PL')}%</span>
       </div>
+            </div>
       <div class="pbar"><span style="width:${p}%;background:var(--green)"></span></div>
       <div class="legend" style="margin-top:16px">${info.map(([k,v])=>`<div class="legend-i"><span class="n muted">${k}</span><b>${v}</b></div>`).join('')}</div>
+      ${stats.length?`<div class="legend" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">${stats.map(([k,v])=>`<div class="legend-i"><span class="n muted">${k}</span><b class="num">${v}</b></div>`).join('')}</div>`:''}
       <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+        ${paidOff?'':`<button class="btn btn-primary btn-sm" onclick="loanPaymentModal(${l.id},'INSTALLMENT')">${icon('cash')}Zapłać ratę</button>
+        <button class="btn btn-ghost btn-sm" onclick="loanPaymentModal(${l.id},'OVERPAYMENT')">${icon('down')}Nadpłać</button>`}
+        <button class="btn btn-ghost btn-sm" onclick="loanPaymentsModal(${l.id})">${icon('list')}Spłaty${num(l.paymentsCount)?` (${l.paymentsCount})`:''}</button>
         <button class="btn btn-ghost btn-sm" onclick="accountHistoryModal(${l.accountId})">${icon('history')}Historia salda</button>
         <button class="btn btn-ghost btn-sm" onclick="loanModal(${l.id})">${icon('edit')}Ustawienia</button>
       </div>
@@ -2135,14 +2207,21 @@
     </div>
     <div class="row">
       <div class="field"><label>Dzień płatności raty</label><input class="input num" type="number" min="1" max="31" step="1" id="ln-day" value="${ed?ed.paymentDay:''}" placeholder="1–31"></div>
-      <div class="field"><label>Konto spłaty</label><select class="input" id="ln-pay">${payOpts(ed?.defaultPaymentAccountId)}</select></div>
+            <div class="field"><label>Konto spłaty</label><select class="input" id="ln-pay">${payOpts(ed?.defaultPaymentAccountId)}</select></div>
     </div>
     <div class="field"><label>Oprocentowanie</label>${seg('ln-rtype', {FIXED:'Stałe', VARIABLE:'Zmienne'}, ed?.rateType||'FIXED')}</div>
-    <div class="field"><label>Po nadpłacie domyślnie</label>${seg('ln-strat', STRAT_N, ed?.overpaymentStrategy||'SHORTEN_TERM')}<span class="hint">Przy każdej nadpłacie wybierzesz to jeszcze raz.</span></div>`,
+    <div class="field"><label>Po nadpłacie domyślnie</label>${seg('ln-strat', STRAT_N, ed?.overpaymentStrategy||'SHORTEN_TERM')}<span class="hint">Przy każdej nadpłacie wybierzesz to jeszcze raz.</span></div>
+    <label class="check" style="display:flex;gap:8px;align-items:center;margin:4px 0 10px"><input type="checkbox" id="ln-sub" ${ed?.subsidizedRate!=null?'checked':''}> Kredyt z dopłatą do rat (np. Bezpieczny Kredyt 2%)</label>
+    <div class="row" id="ln-sub-box" style="${ed?.subsidizedRate!=null?'':'display:none'}">
+      <div class="field"><label>Oprocentowanie po dopłacie (%)</label><input class="input num" type="number" min="0" max="100" step="0.0001" id="ln-srate" value="${ed?.subsidizedRate!=null?num(ed.subsidizedRate):''}" placeholder="np. 4,14"><span class="hint">Tyle płacisz Ty; resztę odsetek pokrywa państwo.</span></div>
+      <div class="field"><label>Dopłata do dnia</label><input class="input" type="date" id="ln-send" value="${ed?.subsidyEndDate||''}"><span class="hint">W BK2% dopłaty trwają 10 lat od uruchomienia.</span></div>
+    </div>`,
             footer:`<button class="btn btn-ghost" data-close>Anuluj</button><button class="btn btn-primary" id="ln-save">${ed?'Zapisz zmiany':'Dodaj kredyt'}</button>`});
         $$('.seg', m).forEach(s=>$$('button', s).forEach(b=>b.onclick=()=>$$('button', s).forEach(x=>x.classList.toggle('on', x===b))));
         const segVal = sid => $(`#${sid} button.on`, m)?.dataset.k;
         const val = sid => $('#'+sid, m).value.trim().replace(',', '.');
+        const tenYears = () => { const st = ed?.startDate || val('ln-start'); if (!st) return ''; const d = parseDate(st); return isoLocal(new Date(d.getFullYear()+10, d.getMonth(), d.getDate())); };
+        $('#ln-sub',m).onchange = e=>{ $('#ln-sub-box',m).style.display = e.target.checked?'':'none'; if (e.target.checked && !$('#ln-send',m).value) $('#ln-send',m).value = tenYears(); };
         $('#ln-save',m).onclick = e=>withBtn(e.currentTarget, async ()=>{
             const name = val('ln-name'); if (!name) return toast('Podaj nazwę kredytu','err');
             const termMonths = parseInt(val('ln-term'),10), rate = val('ln-rate'), paymentDay = parseInt(val('ln-day'),10);
@@ -2150,10 +2229,13 @@
             if (rate==='' || !(num(rate)>=0 && num(rate)<=100)) return toast('Podaj oprocentowanie w procentach, np. 7,2','err');
             if (!(paymentDay>=1 && paymentDay<=31)) return toast('Dzień płatności to liczba od 1 do 31','err');
             const pay = $('#ln-pay',m).value;
-            const common = {name, lender:val('ln-lender'), termMonths, annualInterestRate:+(+rate).toFixed(4), rateType:segVal('ln-rtype'), paymentDay, overpaymentStrategy:segVal('ln-strat')};
+            const hasSub = $('#ln-sub',m).checked, srate = val('ln-srate');
+            if (hasSub && (srate==='' || !(num(srate)>=0 && num(srate)<=num(rate)))) return toast('Oprocentowanie po dopłacie musi być niższe niż oprocentowanie kredytu','err');
+            const subsidy = hasSub ? {subsidizedRate:+(+srate).toFixed(4), subsidyEndDate:val('ln-send')||undefined} : {};
+            const common = {name, lender:val('ln-lender'), termMonths, annualInterestRate:+(+rate).toFixed(4), rateType:segVal('ln-rtype'), paymentDay, overpaymentStrategy:segVal('ln-strat'), ...subsidy};
             try {
                 if (ed) {
-                    await api('PATCH','/api/loans/'+ed.id, {...common, ...(pay ? {defaultPaymentAccountId:+pay} : {clearDefaultPaymentAccount:true})});
+                    await api('PATCH','/api/loans/'+ed.id, {...common, ...(pay ? {defaultPaymentAccountId:+pay} : {clearDefaultPaymentAccount:true}), ...(hasSub ? {} : {clearSubsidy:true})});
                 } else {
                     const orig = num(val('ln-orig')), out = num(val('ln-out')), currency = val('ln-cur').toUpperCase() || 'PLN';
                     if (!(orig>0)) return toast('Podaj kwotę kredytu z umowy','err');
@@ -2169,6 +2251,152 @@
             } catch(err){ toast(err.message,'err'); }
         });
     }
+
+    const PAY_N = {INSTALLMENT:'Rata', OVERPAYMENT:'Nadpłata', DISBURSEMENT:'Wypłata transzy'};
+    function pct(v){ return num(v).toLocaleString('pl-PL',{maximumFractionDigits:4}); }
+    async function reloadLoans(){ S.loans = await api('GET','/api/loans') || []; await refreshAccounts(); }
+
+    /* Rata, nadpłata albo wypłata. Kwoty wypełnia podpowiedź z serwera; wpisujesz je z wyciągu. */
+    async function loanPaymentModal(loanId, kind='INSTALLMENT', paymentId=null){
+        if (!S.loans) { try { S.loans = await api('GET','/api/loans') || []; } catch(err){ return toast(err.message,'err'); } }
+        const l = S.loans.find(x=>x.id===loanId); if (!l) return;
+        let ed = null;
+        if (paymentId){ try { ed = (await api('GET',`/api/loans/${loanId}/payments`)||[]).find(p=>p.id===paymentId); } catch(err){ return toast(err.message,'err'); } if (!ed) return; kind = ed.kind; }
+        const accs = spendAccs().filter(a=>(a.currency||'').toUpperCase()===(l.currency||'').toUpperCase());
+        if (!accs.length) return toast(`Brak konta w ${l.currency}, z którego można spłacić kredyt`,'err');
+        const payer = ed?.payerAccountId ?? l.defaultPaymentAccountId ?? accs[0].id;
+        const money = (id, label, hint='') => `<div class="field"><label>${label}</label><input class="input num" type="number" min="0" step="0.01" id="${id}" placeholder="0,00">${hint?`<span class="hint" id="${id}-h">${hint}</span>`:''}</div>`;
+        const m = openModal({title: `${ed?'Edycja · ':''}${esc(l.name)}`, wide:true, body:`
+    <div class="field"><div class="seg" id="lp-kind">${Object.entries(PAY_N).map(([k,n])=>`<button type="button" data-k="${k}" class="${k===kind?'on':''}" ${ed&&k!==kind?'disabled':''}>${n}</button>`).join('')}</div></div>
+    <div class="row">
+      <div class="field"><label>Data pobrania</label><input class="input" type="date" id="lp-date"></div>
+      <div class="field"><label id="lp-acc-l">Z konta</label><select class="input" id="lp-acc">${accs.map(a=>`<option value="${a.id}" ${String(a.id)===String(payer)?'selected':''}>${esc(a.name)} · ${fmtMoney(a.balance,a.currency)}</option>`).join('')}</select></div>
+    </div>
+    <div class="row">${money('lp-princ','Kapitał')}${money('lp-int','Odsetki naliczone przez bank','&nbsp;')}</div>
+    <div class="row" id="lp-row2">${money('lp-sub','Dopłata państwa','Część odsetek, której nie płacisz.')}${money('lp-fee','Opłaty i prowizje')}</div>
+    <div class="row" id="lp-row3">
+      <div class="field"><label>Zeszło z konta (z wyciągu)</label><input class="input num" type="number" min="0" step="0.01" id="lp-paid" placeholder="0,00"><span class="hint">Wpisz kwotę z wyciągu, a dopłata przeliczy się sama.</span></div>
+      <div class="field" id="lp-strat-f"><label>Po nadpłacie</label>${`<div class="seg" id="lp-strat">${Object.entries(STRAT_N).map(([k,n])=>`<button type="button" data-k="${k}">${n}</button>`).join('')}</div>`}</div>
+    </div>
+    <div class="field"><label>Opis</label><input class="input" id="lp-desc" maxlength="255" placeholder="opcjonalnie, np. Rata 12/2026"></div>
+    <div class="note" id="lp-sum" style="margin-top:4px"></div>`,
+            footer:`<button class="btn btn-ghost" data-close>Anuluj</button><button class="btn btn-primary" id="lp-save">${ed?'Zapisz zmiany':'Zapisz'}</button>`});
+        const f = id => $('#'+id, m), v = id => num(f(id).value.replace(',','.'));
+        const setMoney = (id, x) => f(id).value = x==null ? '' : num(x).toFixed(2);
+        const curKind = () => $('#lp-kind button.on', m).dataset.k;
+        const setStrat = k => $$('#lp-strat button', m).forEach(b=>b.classList.toggle('on', b.dataset.k===k));
+        $$('#lp-strat button', m).forEach(b=>b.onclick=()=>setStrat(b.dataset.k));
+        setStrat(ed?.strategy || l.overpaymentStrategy);
+        const layout = () => {
+            const k = curKind(), disb = k==='DISBURSEMENT';
+            f('lp-acc-l').textContent = disb ? 'Na konto' : 'Z konta';
+            $$('#lp-int, #lp-sub, #lp-paid', m).forEach(x=>x.closest('.field').style.display = disb?'none':'');
+            f('lp-sub').closest('.field').style.display = disb ? 'none' : '';
+            f('lp-strat-f').style.display = k==='OVERPAYMENT' ? '' : 'none';
+        };
+        const summary = () => {
+            const k = curKind(), p = v('lp-princ'), i = v('lp-int'), s = Math.min(v('lp-sub'), i), fee = v('lp-fee'), cu = l.currency;
+            if (k==='DISBURSEMENT'){ f('lp-sum').innerHTML = `Na konto: <b>${fmtMoney(p-fee,cu)}</b> · dług rośnie o <b>${fmtMoney(p,cu)}</b>${fee?` · wydatek (prowizja): <b>${fmtMoney(fee,cu)}</b>`:''}`; return; }
+            const paid = p + i - s + fee;
+            f('lp-sum').innerHTML = `Z konta: <b>${fmtMoney(paid,cu)}</b> · wydatek (odsetki${fee?' i opłaty':''}): <b>${fmtMoney(i-s+fee,cu)}</b> · spłata kapitału: <b>${fmtMoney(p,cu)}</b>${s?` · dopłata: <b>${fmtMoney(s,cu)}</b>`:''}`;
+            if (document.activeElement!==f('lp-paid')) setMoney('lp-paid', paid);
+        };
+        // Kwota z wyciągu → dopłata = kapitał + odsetki + opłaty − to, co zeszło z konta.
+        f('lp-paid').oninput = () => { const s = v('lp-princ') + v('lp-int') + v('lp-fee') - v('lp-paid'); setMoney('lp-sub', Math.max(0, Math.round(s*100)/100)); summary(); };
+        $$('#lp-princ, #lp-int, #lp-sub, #lp-fee', m).forEach(x=>x.oninput = summary);
+        const suggest = async () => {
+            try {
+                const k = curKind(), d = f('lp-date').value;
+                const sg = await api('GET', `/api/loans/${loanId}/payments/suggest` + qs({kind:k, date:d||undefined}));
+                if (!d) f('lp-date').value = sg.paymentDate;
+                setMoney('lp-princ', k==='OVERPAYMENT' && v('lp-princ') ? v('lp-princ') : sg.principalAmount);
+                setMoney('lp-int', sg.interestAmount); setMoney('lp-sub', sg.subsidyAmount); setMoney('lp-fee', sg.feeAmount);
+                f('lp-int-h').textContent = k==='DISBURSEMENT' ? '' : `Szacunek: ${sg.interestDays} dni od ${fmtShort(sg.interestFrom)} od kapitału ${fmtMoney(sg.outstandingBefore,l.currency)}. Popraw na kwotę z wyciągu.`;
+                if (k==='OVERPAYMENT' && !v('lp-princ')) f('lp-princ').focus();
+                summary();
+            } catch(err){ toast(err.message,'err'); }
+        };
+        $$('#lp-kind button', m).forEach(b=>b.onclick=()=>{ if (ed) return; $$('#lp-kind button', m).forEach(x=>x.classList.toggle('on', x===b)); f('lp-princ').value=''; layout(); suggest(); });
+        f('lp-date').onchange = () => { if (!ed) suggest(); };
+        layout();
+        if (ed){
+            f('lp-date').value = ed.paymentDate; setMoney('lp-princ', ed.principalAmount); setMoney('lp-int', ed.interestAmount);
+            setMoney('lp-sub', ed.subsidyAmount); setMoney('lp-fee', ed.feeAmount); f('lp-desc').value = ed.description||'';
+            f('lp-int-h').innerHTML = `<a href="#" id="lp-sg">Podpowiedz kwoty na tę datę</a>`; $('#lp-sg',m).onclick = e=>{ e.preventDefault(); suggest(); };
+            summary();
+        } else {
+            if (kind==='OVERPAYMENT') f('lp-date').value = isoLocal();
+            await suggest();
+        }
+        $('#lp-save',m).onclick = e=>withBtn(e.currentTarget, async ()=>{
+            const k = curKind(), date = f('lp-date').value;
+            if (!date) return toast('Podaj datę pobrania','err');
+            const body = {kind:k, paymentDate:date, payerAccountId:+f('lp-acc').value, principalAmount:+v('lp-princ').toFixed(2),
+                interestAmount:k==='DISBURSEMENT'?0:+v('lp-int').toFixed(2), subsidyAmount:k==='DISBURSEMENT'?0:+v('lp-sub').toFixed(2),
+                feeAmount:+v('lp-fee').toFixed(2), strategy:k==='OVERPAYMENT' ? $('#lp-strat button.on',m)?.dataset.k : undefined,
+                description:f('lp-desc').value.trim()||undefined};
+            if (body.subsidyAmount > body.interestAmount) return toast('Dopłata nie może być wyższa niż odsetki','err');
+            if (k!=='INSTALLMENT' && !(body.principalAmount>0)) return toast('Podaj kwotę kapitału','err');
+            try {
+                if (ed) await api('PUT', `/api/loans/${loanId}/payments/${ed.id}`, body);
+                else await api('POST', `/api/loans/${loanId}/payments`, body);
+                toast(ed ? 'Spłata zaktualizowana' : (k==='DISBURSEMENT' ? 'Wypłata zapisana' : 'Spłata zapisana'));
+                closeModal(); await reloadLoans();
+                if (modalStack.length && $('#lps-body')) loanPaymentsModal(loanId, true);
+                if (S.view==='loans') viewLoans(); else rerender();
+            } catch(err){ toast(err.message,'err'); }
+        });
+    }
+
+    /* Lista spłat kredytu z edycją, usuwaniem i wyrównaniem do wyciągu. */
+    async function loanPaymentsModal(loanId, refresh=false){
+        const l = (S.loans||[]).find(x=>x.id===loanId); if (!l) return;
+        let m = refresh && modalStack.length ? modalStack[modalStack.length-1] : null;
+        if (!m || !$('#lps-body', m)){
+            m = openModal({title:`Spłaty · ${esc(l.name)}`, xwide:true, body:`<div id="lps-body">${'<div class="skeleton" style="height:18px;margin:14px 0"></div>'.repeat(5)}</div>`,
+                footer:`<button class="btn btn-ghost" id="lps-rec">${icon('scale')}Wyrównaj do wyciągu</button><span style="flex:1"></span><button class="btn btn-ghost" data-close>Zamknij</button>`});
+            $('#lps-rec', m).onclick = ()=>loanReconcileModal(loanId);
+        }
+        let rows = [];
+        try { rows = await api('GET', `/api/loans/${loanId}/payments`) || []; } catch(err){ return toast(err.message,'err'); }
+        const cu = l.currency, mny = x => fmtMoney(x, cu);
+        const tot = k => rows.filter(p=>p.kind!=='DISBURSEMENT').reduce((s,p)=>s+num(p[k]),0);
+        const hasSub = rows.some(p=>num(p.subsidyAmount)), hasFee = rows.some(p=>num(p.feeAmount));
+        $('#lps-body', m).innerHTML = rows.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Data i rodzaj</th><th>Kapitał</th><th>Odsetki (Twoje)</th>${hasSub?'<th>Dopłata</th>':''}${hasFee?'<th>Opłaty</th>':''}<th>Z konta</th><th>Dług po</th><th></th></tr></thead><tbody>
+      ${rows.map(p=>`<tr><td>${fmtDate(p.paymentDate)} · <b>${PAY_N[p.kind]||p.kind}</b><span class="delta faint">${esc(p.payerAccountName||'')}${p.strategy?' · '+(STRAT_N[p.strategy]||'').toLowerCase():''}${p.description?' · '+esc(p.description):''}</span></td>
+        <td class="num">${mny(p.principalAmount)}</td><td class="num">${mny(p.interestPaid)}</td>${hasSub?`<td class="num">${num(p.subsidyAmount)?mny(p.subsidyAmount):'—'}</td>`:''}
+        ${hasFee?`<td class="num">${num(p.feeAmount)?mny(p.feeAmount):'—'}</td>`:''}<td class="num"><b>${p.kind==='DISBURSEMENT'?'+':''}${mny(p.payerAmount)}</b></td><td class="num">${mny(p.outstandingAfter)}</td>
+        <td><span style="display:inline-flex;gap:2px"><button class="icon-btn" title="Edytuj" data-ed="${p.id}">${icon('edit')}</button><button class="icon-btn danger" title="Usuń" data-del="${p.id}">${icon('trash')}</button></span></td></tr>`).join('')}
+      </tbody><tfoot><tr><td>Razem spłaty</td><td class="num">${mny(tot('principalAmount'))}</td><td class="num">${mny(tot('interestPaid'))}</td>${hasSub?`<td class="num">${mny(tot('subsidyAmount'))}</td>`:''}${hasFee?`<td class="num">${mny(tot('feeAmount'))}</td>`:''}<td class="num">${mny(tot('payerAmount'))}</td><td></td><td></td></tr></tfoot></table></div>
+      <p class="hint" style="margin-top:12px">Odsetki (Twoje) to odsetki po dopłacie, czyli wydatek. Usunięcie spłaty cofa przelew kapitału i wydatki.</p>`
+            : emptyState('list','Brak spłat','Zapisz pierwszą ratę przyciskiem „Zapłać ratę”.');
+        $$('[data-ed]', m).forEach(b=>b.onclick=()=>loanPaymentModal(loanId, null, +b.dataset.ed));
+        $$('[data-del]', m).forEach(b=>b.onclick=async ()=>{
+            if (!await confirmBox({title:'Usunąć spłatę?', text:'Przelew kapitału i wydatki z tej spłaty zostaną cofnięte, a salda wrócą do stanu sprzed niej.'})) return;
+            try { await api('DELETE', `/api/loans/${loanId}/payments/${b.dataset.del}`); toast('Spłata usunięta'); await reloadLoans(); loanPaymentsModal(loanId, true); if (S.view==='loans') viewLoans(); else rerender(); }
+            catch(err){ toast(err.message,'err'); }
+        });
+    }
+
+    function loanReconcileModal(loanId){
+        const l = (S.loans||[]).find(x=>x.id===loanId); if (!l) return;
+        const m = openModal({title:'Wyrównaj do wyciągu', body:`
+    <p class="muted" style="margin-top:0">W aplikacji zostało <b>${fmtMoney(l.outstandingPrincipal,l.currency)}</b>. Wpisz kapitał do spłaty z banku, a różnica zapisze się na koncie kredytu.</p>
+    <div class="row">
+      <div class="field"><label>Pozostało do spłaty według banku</label><input class="input num" type="number" min="0" step="0.01" id="lr-out" value="${num(l.outstandingPrincipal).toFixed(2)}"></div>
+      <div class="field"><label>Na dzień</label><input class="input" type="date" id="lr-date" value="${isoLocal()}" max="${isoLocal()}"></div>
+    </div>
+    <span class="hint">Dług mniejszy niż w aplikacji: korekta salda. Dług większy: wydatek „Prowizje i opłaty” doliczony do kredytu.</span>`,
+            footer:`<button class="btn btn-ghost" data-close>Anuluj</button><button class="btn btn-primary" id="lr-ok">Wyrównaj</button>`});
+        $('#lr-ok', m).onclick = e=>withBtn(e.currentTarget, async ()=>{
+            const out = num($('#lr-out',m).value.replace(',','.'));
+            if (!(out>=0)) return toast('Podaj kwotę z wyciągu','err');
+            try { await api('POST', `/api/loans/${loanId}/reconcile`, {outstanding:+out.toFixed(2), date:$('#lr-date',m).value||undefined});
+                toast('Saldo kredytu wyrównane'); closeModal(); await reloadLoans(); if ($('#lps-body')) loanPaymentsModal(loanId, true); if (S.view==='loans') viewLoans(); else rerender(); }
+            catch(err){ toast(err.message,'err'); }
+        });
+    }
+
     /* =========================================================
        ACCOUNT HISTORY (running balance)
        ========================================================= */

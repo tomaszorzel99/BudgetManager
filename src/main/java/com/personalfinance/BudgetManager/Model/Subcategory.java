@@ -25,4 +25,12 @@ public class Subcategory {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
+
+    /** Klucz podkategorii systemowej (np. LOAN_INTEREST); null dla podkategorii użytkownika. */
+    @Column(name = "system_key", length = 40, unique = true, updatable = false)
+    private String systemKey;
+
+    public boolean isSystem() {
+        return systemKey != null;
+    }
 }

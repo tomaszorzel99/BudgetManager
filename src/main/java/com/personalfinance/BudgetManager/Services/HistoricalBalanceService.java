@@ -28,12 +28,15 @@ public class HistoricalBalanceService {
     }
 
     public BalanceAtDateDTO calculate(Long userId, LocalDate date){
-        List<Account> accounts = accountRepository.findForHistoricalReport(userId, date.plusDays(1).atStartOfDay());
+        // Wszystkie konta użytkownika, także założone później: saldo na dzień wynika z transakcji
+        // z datą ≤ date, więc konto z saldem początkowym cofniętym w czasie (kredyt, mieszkanie)
+        // pojawia się w historii od tej daty, a konto bez wcześniejszych operacji daje 0.
+        List<Account> accounts = accountRepository.findForHistoricalReport(userId);
 
         if(accounts.isEmpty()){
             return new BalanceAtDateDTO(
                     date, null, BigDecimal.ZERO,
-                    BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+                    BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
         }
 
         List<Long> ids = accounts.stream().map(Account::getId).toList();
@@ -80,6 +83,7 @@ public class HistoricalBalanceService {
         BigDecimal savings = BigDecimal.ZERO;
         BigDecimal investments = BigDecimal.ZERO;
         BigDecimal liabilities = BigDecimal.ZERO;
+        BigDecimal property = BigDecimal.ZERO;
         String currency = null;
 
         for (Account account : accounts) {
@@ -105,10 +109,12 @@ public class HistoricalBalanceService {
                 investments = investments.add(balance);
             } else if (account.isLiability()) {
                 liabilities = liabilities.add(balance);
+            } else if (account.isProperty()) {
+                property = property.add(balance);
             }
         }
 
         return new BalanceAtDateDTO(
-                date, currency, total, savings, investments, liabilities);
+                date, currency, total, savings, investments, liabilities, property);
     }
 }

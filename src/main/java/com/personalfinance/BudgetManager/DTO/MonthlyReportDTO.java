@@ -18,4 +18,20 @@ public class MonthlyReportDTO {
     private BigDecimal transfersFromSavings;
     private BigDecimal netSavingsThisMonth;
     private BigDecimal monthlyBalance;
+
+    // Kredyty (V15). Kapitał to nie wydatek: pokazujemy go obok wydatków.
+    /** Kapitał ze zwykłych rat. */
+    private BigDecimal loanPrincipalRepaid;
+    /** Nadpłaty kapitału. */
+    private BigDecimal loanOverpayments;
+    /** Wypłaty z kredytu (dług wzrósł). */
+    private BigDecimal loanDisbursements;
+    /** Odsetki i opłaty od kredytów (kategoria „Kredyty i pożyczki”); już zawarte w {@code expenses}. */
+    private BigDecimal loanCosts;
+    /** Dopłaty państwa do odsetek; nie są ani wydatkiem, ani przychodem. */
+    private BigDecimal loanSubsidy;
+    /** Wypływ łącznie: wydatki + kapitał z rat + nadpłaty. */
+    private BigDecimal totalOutflow;
+    /** Odłożone i spłacone: netto na oszczędności + kapitał + nadpłaty − wypłaty z kredytu. */
+    private BigDecimal wealthBuilt;
 }
