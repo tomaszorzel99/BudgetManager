@@ -574,7 +574,13 @@
     function accCur(id){ return (accById(id)?.currency || '').toUpperCase(); }
     function catByName(name, type){ return S.categories.find(c=>c.name===name && (!type || c.type===type)) || S.categories.find(c=>c.name===name); }
     function catColor(name, idx=0){ const c = catByName(name); return (c && /^#[0-9a-f]{6}$/i.test(c.color||'')) ? c.color : PALETTE[idx%PALETTE.length]; }
-    function subsOf(cat){ return S.subcategories.filter(s=>s.categoryName===cat.name); }
+    // Kategorie i podkategorie należą do grupy (systemowe są wspólne). groupId == null: bez filtrowania.
+    function usableIn(x, groupId){ return !!x.system || groupId==null || x.groupId===groupId; }
+    function accGroup(accountId){ const a = S.accounts.find(x=>String(x.id)===String(accountId)); return a ? a.groupId : null; }
+    function groupName(id){ return (S.user?.groups||[]).find(g=>g.id===id)?.name || ''; }
+    function multiGroup(){ return (S.user?.groups||[]).length > 1; }
+    function catLabel(c){ return c.name + (multiGroup() && c.groupId!=null ? ' · ' + groupName(c.groupId) : ''); }
+    function subsOf(cat, groupId){ return S.subcategories.filter(s=>(s.categoryId!=null ? s.categoryId===cat.id : s.categoryName===cat.name) && usableIn(s, groupId)); }
     const NO_SUB = 'Bez podkategorii';
     function subOptions(subs, selectedId){
         return `<option value="">— ${NO_SUB} —</option>` + subs.map(s=>`<option value="${s.id}" ${String(s.id)===String(selectedId)?'selected':''}>${esc(s.name)}</option>`).join('');
@@ -619,6 +625,19 @@
     }
     const qs = o => { const p = Object.entries(o).filter(([,v])=>v!==undefined&&v!==null&&v!==''); return p.length ? '?'+p.map(([k,v])=>`${k}=${encodeURIComponent(v)}`).join('&') : ''; };
     const ERR_PL = [
+        [/in use/i,'Ta kategoria ma transakcje, budżety albo stałe wydatki, więc nie można jej usunąć ani zmienić jej typu.'],
+        [/reserved for the system/i,'Ten typ kategorii jest zarezerwowany dla salda początkowego.'],
+        [/same type/i,'Podkategorię można przenieść tylko do kategorii tego samego typu.'],
+        [/system (sub)?category cannot be changed/i,'Kategorie i podkategorie systemowe są wspólne dla wszystkich, więc nie można ich zmieniać ani usuwać.'],
+        [/already exists in this group/i,'W tej grupie jest już kategoria o tej nazwie i tym typie.'],
+        [/another group than the account/i,'Ta kategoria należy do innej grupy niż konto.'],
+        [/same group/i,'Podkategorię można przenieść tylko do kategorii z tej samej grupy.'],
+        [/Create a group first/i,'Najpierw utwórz grupę.'],
+        [/Choose a group/i,'Wybierz grupę.'],
+        [/is too long/i,'Tekst jest za długi.'],
+        [/Invalid date/i,'Nieprawidłowa data.'],
+        [/changed by someone else/i,'Ktoś w tym samym czasie zmienił te dane. Odśwież widok i spróbuj ponownie.'],
+        [/at most 2 decimal places/i,'Kwota może mieć najwyżej 2 miejsca po przecinku.'],
         [/Invalid email or password/i,'Nieprawidłowy e-mail lub hasło'],
         [/Too many/i,'Zbyt wiele nieudanych prób logowania. Spróbuj za chwilę.'],
         [/Cannot delete account with transactions/i,'Konto ma transakcje, więc można je tylko zarchiwizować.'],
@@ -1017,7 +1036,7 @@
       <div class="month-nav"><button class="icon-btn" id="t-prev">${icon('left')}</button><b id="t-month"></b><button class="icon-btn" id="t-next">${icon('right')}</button></div>
       <div class="seg" id="t-type">${[['ALL','Wszystkie'],['INCOME','Przychody'],['EXPENSE','Wydatki'],['ADJUSTMENT','Korekty']].map(([k,n])=>`<button data-k="${k}" class="${S.txType===k?'on':''}">${n}</button>`).join('')}</div>
       <div class="search">${icon('search')}<input class="input" id="t-search" placeholder="Szukaj opisu, kategorii…" value="${esc(S.txSearch)}"></div>
-      <select class="input" id="t-cat"><option value="">Wszystkie kategorie</option>${S.categories.filter(c=>c.type!=='INITIAL_BALANCE').map(c=>`<option value="${c.id}" ${String(S.txCat)===String(c.id)?'selected':''}>${esc(c.name)}</option>`).join('')}</select>
+            <select class="input" id="t-cat"><option value="">Wszystkie kategorie</option>${S.categories.filter(c=>c.type!=='INITIAL_BALANCE').map(c=>`<option value="${c.id}" ${String(S.txCat)===String(c.id)?'selected':''}>${esc(catLabel(c))}</option>`).join('')}</select>
       <select class="input" id="t-acc"><option value="">Wszystkie konta</option>${S.accounts.map(a=>`<option value="${a.id}" ${String(S.txAcc)===String(a.id)?'selected':''}>${esc(a.name)}</option>`).join('')}</select>
       ${groups.length?`<select class="input" id="t-scope"><option value="">Tylko moje</option>${groups.map(g=>`<option value="${g.id}" ${String(S.txScope)===String(g.id)?'selected':''}>Grupa: ${esc(g.name)}</option>`).join('')}</select>`:''}
     </div>
@@ -1105,14 +1124,16 @@
             footer:`<button class="btn btn-ghost" data-close>Anuluj</button><button class="btn btn-primary" id="tx-save">${editing?'Zapisz zmiany':'Dodaj transakcję'}</button>`});
         const setType = k=>{
             type = k; $$('#tx-type button', m).forEach(b=>b.classList.toggle('on', b.dataset.k===k));
-            const cats = S.categories.filter(c=>c.type===k);
+            const g = accGroup(editing ? editing.accountId : $('#tx-acc',m).value), prev = $('#tx-cat',m).value;
+            const cats = S.categories.filter(c=>c.type===k && usableIn(c, g));
             $('#tx-cat',m).innerHTML = cats.length ? cats.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('') : '<option value="">Brak kategorii</option>';
+            if (cats.some(c=>String(c.id)===prev)) $('#tx-cat',m).value = prev;
             if (editing){ const ec = cats.find(c=>c.id===editing.categoryId) || catByName(editing.categoryName, k); if (ec) $('#tx-cat',m).value = ec.id; }
             fillSubs();
         };
         const fillSubs = ()=>{
             const cat = S.categories.find(c=>String(c.id)===$('#tx-cat',m).value);
-            const subs = cat ? subsOf(cat) : [];
+            const subs = cat ? subsOf(cat, accGroup(editing ? editing.accountId : $('#tx-acc',m).value)) : [];
             $('#tx-sub',m).innerHTML = subOptions(subs, editing && cat && cat.id===editing.categoryId ? editing.subcategoryId : null);
             const warn = $('#tx-nosub',m);
             if (!cat) { warn.innerHTML = `Brak kategorii tego typu. <a href="#categories" data-close-go="categories">Dodaj kategorię</a>`; warn.classList.remove('hidden'); }
@@ -1122,7 +1143,7 @@
         const updCur = ()=>{ $('#tx-cur',m).textContent = accCur($('#tx-acc',m).value) || 'PLN'; };
         $$('#tx-type button', m).forEach(b=>b.onclick=()=>{ if(!editing) setType(b.dataset.k); });
         if (editing) $$('#tx-type button', m).forEach(b=>b.disabled = b.dataset.k!==editing.type);
-        $('#tx-cat',m).onchange = fillSubs; $('#tx-acc',m).onchange = updCur;
+        $('#tx-cat',m).onchange = fillSubs; $('#tx-acc',m).onchange = ()=>{ updCur(); setType(type); };
         setType(type); updCur();
         $('#tx-save',m).onclick = e=> withBtn(e.currentTarget, async ()=>{
             const amount = num($('#tx-amount',m).value), categoryId = +$('#tx-cat',m).value || null, subcategoryId = +$('#tx-sub',m).value || null;
@@ -1271,7 +1292,7 @@
         }).join('');
         if (S.archived.length){
             html += `<details class="card acc-group" style="padding:0"><summary class="acc-group-h" style="cursor:pointer;list-style:none"><span class="cat-ico ico" style="width:32px;height:32px;background:var(--surface-2);color:var(--text-3)">${icon('archive')}</span><h3>Zarchiwizowane (${S.archived.length})</h3><span class="faint">pokaż</span></summary>
-      ${S.archived.map(a=>`<div class="acc-row" style="opacity:.7;cursor:pointer" onclick="accountHistoryModal(${a.id})" title="Historia salda"><div class="main-t" style="flex:1"><div style="font-weight:600">${esc(a.name)}</div><div class="faint" style="font-size:12.5px">${ACC_TYPES[a.accountType]?.n||''} · ${esc(a.groupName||'')}</div></div><b class="num">${fmtMoney(a.balance,a.currency)}</b></div>`).join('')}</details>`;
+      ${S.archived.map(a=>`<div class="acc-row" style="opacity:.7;cursor:pointer" onclick="accountHistoryModal(${a.id})" title="Historia salda"><div class="main-t" style="flex:1"><div style="font-weight:600">${esc(a.name)}</div><div class="faint" style="font-size:12.5px">${ACC_TYPES[a.accountType]?.n||''} · ${esc(a.groupName||'')}</div></div><b class="num">${fmtMoney(a.balance,a.currency)}</b><button class="btn btn-ghost btn-sm" style="margin-left:12px" title="Przywróć z archiwum" onclick="event.stopPropagation();unarchiveAccount(${a.id})">${icon('archive')}Przywróć</button></div>`).join('')}</details>`;
         }
         c.innerHTML = html;
     }
@@ -1305,7 +1326,7 @@
     </div>
     <div class="field"><label>Grupa</label><select class="input" id="ac-group">${groups.map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join('')}</select><span class="hint">Konto będzie widoczne dla wszystkich członków grupy.</span></div>`}
     <label class="switch" id="ac-sp-row"><div><b style="font-weight:600">Dostępne do wydania</b><div class="hint">Wliczaj saldo do kwoty „dostępne do wydania”.</div></div><input type="checkbox" id="ac-sp" ${ed?(ed.availableForSpending?'checked':''):'checked'}></label>
-    <div class="note hidden" id="ac-prop-note">Nieruchomość to aktywo, nie konto do płacenia. Wpisz jej szacowaną wartość. Jeśli kupiłeś ją na kredyt, ustaw tę samą datę co saldo kredytu, a wartość netto nie zrobi skoku. Później aktualizujesz ją przyciskiem „Nowa wycena”.</div>
+        <div class="note hidden" id="ac-prop-note">Nieruchomość to aktywo, nie konto do płacenia. Wpisz jej szacowaną wartość i datę zakupu (albo odbioru kluczy). Dług kredytu liczy się w historii od daty uruchomienia, więc wartość netto nie zrobi skoku. Później aktualizujesz ją przyciskiem „Nowa wycena”.</div>
     ${ed?'<div class="note">Saldo zmienisz transakcją albo korektą salda, a walutę tylko na koncie bez historii.</div>':''}`,
             footer:`<button class="btn btn-ghost" data-close>Anuluj</button><button class="btn btn-primary" id="ac-save">${ed?'Zapisz zmiany':'Utwórz konto'}</button>`});
         let type = ed?.accountType || 'CHECKING';
@@ -1351,8 +1372,8 @@
     }
     function adjustModal(id){
         const a = accById(id); if(!a) return;
-        const adjCats = S.categories.filter(c=>c.type==='ADJUSTMENT');
-        const expCats = S.categories.filter(c=>c.type==='EXPENSE');
+        const adjCats = S.categories.filter(c=>c.type==='ADJUSTMENT' && usableIn(c, a.groupId));
+        const expCats = S.categories.filter(c=>c.type==='EXPENSE' && usableIn(c, a.groupId));
         const m = openModal({title:'Korekta salda', body:`
     <p class="muted" style="margin-bottom:14px">Wpisz rzeczywiste saldo konta <b>${esc(a.name)}</b>. Różnica zostanie zapisana jako transakcja.</p>
     <div class="field"><label>Obecne saldo w aplikacji</label><input class="input num" disabled value="${fmtMoney(a.balance,a.currency)}"></div>
@@ -1370,7 +1391,7 @@
             fillSub();
         };
         const fillSub = ()=>{
-            const cat = S.categories.find(c=>String(c.id)===$('#adj-cat',m).value), subs = cat?subsOf(cat):[];
+            const cat = S.categories.find(c=>String(c.id)===$('#adj-cat',m).value), subs = cat?subsOf(cat, a.groupId):[];
             $('#adj-sub',m).innerHTML = subOptions(subs);
             const w = $('#adj-warn',m);
             if (diff>=0 && !adjCats.length){ w.textContent = 'Brak kategorii typu „Korekta”. Dodaj ją w zakładce Kategorie.'; w.classList.remove('hidden'); }
@@ -1400,6 +1421,10 @@
         if (num(a.balance)!==0) return toast(`Najpierw przenieś ${fmtMoney(a.balance,a.currency)} na inne konto lub skoryguj saldo do zera`,'err');
         if (!await confirmBox({title:`Zarchiwizować „${a.name}”?`, text:'Konto zniknie z listy aktywnych, ale jego historia zostanie w raportach.', okText:'Archiwizuj', danger:false})) return;
         try { await api('PATCH',`/api/accounts/${id}/archive`); toast('Konto zarchiwizowane'); viewAccounts(); } catch(err){ toast(err.message,'err'); }
+    }
+    async function unarchiveAccount(id){
+        const a = accById(id); if(!a) return;
+        try { await api('PATCH',`/api/accounts/${id}/unarchive`); toast(`Konto „${a.name}” przywrócone`); S.allTx=null; viewAccounts(); } catch(err){ toast(err.message,'err'); }
     }
     async function deleteAccount(id){
         const a = accById(id); if(!a) return;
@@ -1520,31 +1545,37 @@
         try { [S.categories, S.subcategories] = await Promise.all([api('GET','/api/categories'), api('GET','/api/subcategories')]); S.categories ||= []; S.subcategories ||= []; }
         catch(err){ toast(err.message,'err'); }
         if (S.view!=='categories') return;
+        // Widok pokazuje kategorie jednej grupy (i wspólne systemowe); nowe kategorie trafiają do tej grupy.
+        const groups = S.user?.groups||[];
+        if (!groups.some(g=>g.id===S.catGroup)) S.catGroup = groups[0]?.id ?? null;
         const cols = [['EXPENSE','Wydatki','r'],['INCOME','Przychody','g'],['ADJUSTMENT','Korekty','v'],['INITIAL_BALANCE','Saldo początkowe','a']];
-        $('#content').innerHTML = `<div class="grid g-2">${cols.map(([k,n,cl])=>{
-            const cats = S.categories.filter(c=>c.type===k);
+        $('#content').innerHTML = `${groups.length>1?`<div class="toolbar"><select class="input" id="c-group">${groups.map(g=>`<option value="${g.id}" ${g.id===S.catGroup?'selected':''}>Grupa: ${esc(g.name)}</option>`).join('')}</select></div>`:''}
+    <div class="grid g-2">${cols.map(([k,n,cl])=>{
+            const cats = S.categories.filter(c=>c.type===k && usableIn(c, S.catGroup));
             if (!cats.length && (k==='INITIAL_BALANCE')) return '';
             return `<div class="card" style="align-self:start"><div class="card-h" style="padding-bottom:12px;border-bottom:1px solid var(--border)"><span class="chip ${cl}">${n}</span><h3></h3><span class="faint">${cats.length}</span>${k!=='INITIAL_BALANCE'?`<button class="icon-btn" title="Dodaj kategorię" onclick="catModal(null,'${k}')">${icon('plus')}</button>`:''}</div>
-      ${cats.length ? cats.map(c=>{ const subs = subsOf(c); const col = /^#[0-9a-f]{6}$/i.test(c.color||'')?c.color:'#888';
+      ${cats.length ? cats.map(c=>{ const subs = subsOf(c, S.catGroup); const col = /^#[0-9a-f]{6}$/i.test(c.color||'')?c.color:'#888';
                     return `<div class="cat-card"><div class="cat-card-top"><span class="cat-ico" style="background:${hexA(col,.15)};color:${col}">${esc(initials(c.name).slice(0,1))}</span>
-          <div class="n">${esc(c.name)}${c.description?`<div class="faint" style="font-weight:400;font-size:12.5px">${esc(c.description)}</div>`:''}</div>
-          <div class="acts"><button class="icon-btn" title="Edytuj" onclick="catModal(${c.id})">${icon('edit')}</button><button class="icon-btn danger" title="Usuń" onclick="deleteCat(${c.id})">${icon('trash')}</button></div></div>
-          <div class="sub-chips">${subs.map(s=>`<span class="sub-chip">${esc(s.name)}<button title="Edytuj" onclick="subModal(${s.id})">${icon('edit')}</button><button title="Usuń" onclick="deleteSub(${s.id})">${icon('x')}</button></span>`).join('')}
+          <div class="n">${esc(c.name)}${c.system?' <span class="chip n" style="font-size:11px;padding:0 6px">systemowa</span>':''}${c.description?`<div class="faint" style="font-weight:400;font-size:12.5px">${esc(c.description)}</div>`:''}</div>
+          ${c.system?'':`<div class="acts"><button class="icon-btn" title="Edytuj" onclick="catModal(${c.id})">${icon('edit')}</button><button class="icon-btn danger" title="Usuń" onclick="deleteCat(${c.id})">${icon('trash')}</button></div>`}</div>
+          <div class="sub-chips">${subs.map(s=>`<span class="sub-chip">${esc(s.name)}${s.system?'':`<button title="Edytuj" onclick="subModal(${s.id})">${icon('edit')}</button><button title="Usuń" onclick="deleteSub(${s.id})">${icon('x')}</button>`}</span>`).join('')}
             <button class="sub-chip add-chip" onclick="subModal(null,${c.id})">+ podkategoria</button></div></div>`; }).join('')
                 : `<div class="card-b">${emptyState('tag','Brak kategorii', k==='ADJUSTMENT'?'Kategoria korekt pozwala wyrównywać salda kont.':'Dodaj pierwszą kategorię.', `<button class="btn btn-ghost btn-sm" onclick="catModal(null,'${k}')">${icon('plus')}Dodaj</button>`)}</div>`}
     </div>`; }).join('')}</div>
-    <p class="hint" style="margin-top:16px">Kategorie są wspólne dla wszystkich użytkowników aplikacji. Każda transakcja wymaga kategorii i podkategorii.</p>`;
+    <p class="hint" style="margin-top:16px">Kategorie należą do grupy: widzą je i zmieniają tylko jej członkowie. Kategorie systemowe są wspólne i nie da się ich zmienić. Każda transakcja wymaga kategorii; podkategoria jest opcjonalna.</p>`;
+        if ($('#c-group')) $('#c-group').onchange = e=>{ S.catGroup = +e.target.value; viewCategories(); };
     }
     function catModal(id, presetType){
         const ed = id ? S.categories.find(c=>c.id===id) : null;
         let color = ed?.color || CAT_SWATCHES[Math.floor(Math.random()*CAT_SWATCHES.length)];
         let type = ed?.type || presetType || 'EXPENSE';
-        const m = openModal({title: ed?'Edytuj kategorię':'Nowa kategoria', body:`
+        if (!ed && S.catGroup==null){ toast('Najpierw utwórz grupę','err'); return groupModal(); }
+        const m = openModal({title: ed?'Edytuj kategorię':(multiGroup()?'Nowa kategoria · '+groupName(S.catGroup):'Nowa kategoria'), body:`
     <div class="field"><label>Typ</label><div class="seg" id="cat-type">${[['EXPENSE','Wydatek','exp'],['INCOME','Przychód','inc'],['ADJUSTMENT','Korekta','adj']].map(([k,n,c])=>`<button type="button" data-k="${k}" class="${c}" ${ed?'disabled':''}>${n}</button>`).join('')}</div></div>
     <div class="field"><label>Nazwa</label><input class="input" id="cat-name" maxlength="100" value="${esc(ed?.name||'')}" placeholder="np. Jedzenie"></div>
     <div class="field"><label>Kolor</label><div class="colors" id="cat-colors">${CAT_SWATCHES.map(s=>`<button type="button" data-c="${s}" style="background:${s}"></button>`).join('')}<input type="color" id="cat-custom" value="${/^#[0-9a-f]{6}$/i.test(color)?color:'#ff6a3d'}" style="width:28px;height:28px;border:none;background:none;padding:0;cursor:pointer" title="Własny kolor"></div></div>
     <div class="field"><label>Opis</label><input class="input" id="cat-desc" maxlength="255" value="${esc(ed?.description||'')}" placeholder="opcjonalnie"></div>
-    ${ed?'':'<div class="field"><label>Pierwsza podkategoria</label><input class="input" id="cat-sub" placeholder="np. Zakupy spożywcze"><span class="hint">Transakcje wymagają podkategorii. Możesz dodać więcej później.</span></div>'}`,
+    ${ed?'':'<div class="field"><label>Pierwsza podkategoria</label><input class="input" id="cat-sub" placeholder="np. Zakupy spożywcze"><span class="hint">Opcjonalnie. Podkategorie możesz dodać też później.</span></div>'}`,
             footer:`<button class="btn btn-ghost" data-close>Anuluj</button><button class="btn btn-primary" id="cat-save">${ed?'Zapisz':'Dodaj kategorię'}</button>`});
         const setC = c=>{ color=c.toUpperCase(); $$('#cat-colors button',m).forEach(b=>b.classList.toggle('on',b.dataset.c.toUpperCase()===color)); };
         const setT = k=>{ type=k; $$('#cat-type button',m).forEach(b=>b.classList.toggle('on',b.dataset.k===k)); };
@@ -1558,7 +1589,7 @@
             try {
                 if (ed) await api('PATCH','/api/categories/'+ed.id,{name, color, description});
                 else {
-                    const created = await api('POST','/api/categories',{name, color, type, description:description||undefined});
+                    const created = await api('POST','/api/categories',{name, color, type, description:description||undefined, groupId:S.catGroup ?? undefined});
                     const sub = $('#cat-sub',m).value.trim();
                     if (sub && created?.id) await api('POST','/api/subcategories',{name:sub, categoryId:created.id});
                 }
@@ -1568,9 +1599,13 @@
     }
     function subModal(id, categoryId, after){
         const ed = id ? S.subcategories.find(s=>s.id===id) : null;
-        const cat = ed ? S.categories.find(c=>c.name===ed.categoryName) : S.categories.find(c=>c.id===categoryId);
+        const cat = ed ? (S.categories.find(c=>c.id===ed.categoryId) || S.categories.find(c=>c.name===ed.categoryName)) : S.categories.find(c=>c.id===categoryId);
+        // Grupa podkategorii: przy edycji jej własna, przy nowej ta wybrana w widoku kategorii.
+        const g = ed ? ed.groupId : (S.catGroup ?? (S.user?.groups||[])[0]?.id ?? null);
+        // Przy edycji podkategorię można przenieść tylko do kategorii tego samego typu i tej samej grupy (backend przenosi też jej transakcje).
+        const catOpts = S.categories.filter(c=> (ed ? (cat && c.type===cat.type) : c.type!=='INITIAL_BALANCE') && usableIn(c, g));
         const m = openModal({title: ed?'Edytuj podkategorię':'Nowa podkategoria', body:`
-    <div class="field"><label>Kategoria</label><select class="input" id="sub-cat" ${ed?'disabled':''}>${S.categories.filter(c=>c.type!=='INITIAL_BALANCE'||ed).map(c=>`<option value="${c.id}" ${cat&&c.id===cat.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
+    <div class="field"><label>Kategoria</label><select class="input" id="sub-cat">${catOpts.map(c=>`<option value="${c.id}" ${cat&&c.id===cat.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select>${ed?'<span class="hint">Zmiana kategorii przeniesie też transakcje i stałe wydatki z tą podkategorią.</span>':''}</div>
     <div class="field"><label>Nazwa</label><input class="input" id="sub-name" maxlength="100" value="${esc(ed?.name||'')}"></div>
     <div class="field"><label>Opis</label><input class="input" id="sub-desc" maxlength="255" value="${esc(ed?.description||'')}" placeholder="opcjonalnie"></div>`,
             footer:`<button class="btn btn-ghost" data-close>Anuluj</button><button class="btn btn-primary" id="sub-save">${ed?'Zapisz':'Dodaj'}</button>`});
@@ -1578,13 +1613,18 @@
             const name = $('#sub-name',m).value.trim(), description = $('#sub-desc',m).value.trim();
             if (!name) return toast('Podaj nazwę','err');
             try {
-                if (ed) await api('PATCH','/api/subcategories/'+ed.id,{name, description});
-                else await api('POST','/api/subcategories',{name, description:description||undefined, categoryId:+$('#sub-cat',m).value});
+                if (ed) await api('PATCH','/api/subcategories/'+ed.id,{name, description, categoryId:+$('#sub-cat',m).value});
+                else await api('POST','/api/subcategories',{name, description:description||undefined, categoryId:+$('#sub-cat',m).value, groupId:g ?? undefined});
                 toast(ed?'Podkategoria zaktualizowana':'Podkategoria dodana'); closeModal();
                 S.subcategories = await api('GET','/api/subcategories') || [];
                 if (after) after(); else viewCategoriesOrRefresh();
             } catch(err){ toast(err.message,'err'); }
         });
+    }
+    // Nowa grupa dostaje domyślne kategorie, a po dołączeniu do grupy widać jej kategorie: wczytujemy je od nowa.
+    async function reloadCats(){
+        [S.categories, S.subcategories] = await Promise.all([api('GET','/api/categories'), api('GET','/api/subcategories')]);
+        S.categories ||= []; S.subcategories ||= [];
     }
     async function viewCategoriesOrRefresh(){
         if (S.view==='categories') return viewCategories();
@@ -1592,7 +1632,7 @@
     }
     async function deleteCat(id){
         const c = S.categories.find(x=>x.id===id);
-        if (!await confirmBox({title:`Usunąć kategorię „${c?.name}”?`, text:'Kategoria jest wspólna dla wszystkich użytkowników. Nie da się usunąć kategorii używanej w transakcjach.'})) return;
+        if (!await confirmBox({title:`Usunąć kategorię „${c?.name}”?`, text:`Kategoria zniknie dla wszystkich członków grupy${c?.groupId!=null&&groupName(c.groupId)?' „'+groupName(c.groupId)+'”':''}. Nie da się usunąć kategorii używanej w transakcjach, budżetach ani płatnościach cyklicznych.`})) return;
         try { await api('DELETE','/api/categories/'+id); toast('Kategoria usunięta'); viewCategories(); } catch(err){ toast(err.message,'err'); }
     }
     async function deleteSub(id){
@@ -1633,7 +1673,7 @@
             footer:`<button class="btn btn-ghost" data-close>Anuluj</button><button class="btn btn-primary" id="grp-save">Utwórz grupę</button>`});
         $('#grp-save',m).onclick = e=>withBtn(e.currentTarget, async ()=>{
             const groupName = $('#grp-name',m).value.trim(); if(!groupName) return toast('Podaj nazwę grupy','err');
-            try { await api('POST','/api/groups',{groupName}); toast('Grupa utworzona'); closeModal(); S.user = await api('GET','/api/users/me'); rerender(); }
+            try { await api('POST','/api/groups',{groupName}); toast('Grupa utworzona'); closeModal(); S.user = await api('GET','/api/users/me'); await reloadCats(); rerender(); }
             catch(err){ toast(err.message,'err'); }
         });
     }
@@ -1655,7 +1695,7 @@
             footer:`<button class="btn btn-ghost" data-close>Anuluj</button><button class="btn btn-primary" id="join-go">Dołącz</button>`});
         $('#join-go',m).onclick = e=>withBtn(e.currentTarget, async ()=>{
             const t = $('#join-token',m).value.trim(); if(!t) return toast('Wklej token','err');
-            try { await api('POST','/api/invitations/accept',{token:t}); toast('Dołączono do grupy'); closeModal(); S.user = await api('GET','/api/users/me'); await refreshAccounts(); rerender(); }
+            try { await api('POST','/api/invitations/accept',{token:t}); toast('Dołączono do grupy'); closeModal(); S.user = await api('GET','/api/users/me'); await refreshAccounts(); await reloadCats(); rerender(); }
             catch(err){ toast(err.message,'err'); }
         });
     }
@@ -1667,7 +1707,7 @@
         $('#ob-join',m).onclick = ()=>{ closeModal(); joinModal(); };
         $('#ob-go',m).onclick = e=>withBtn(e.currentTarget, async ()=>{
             const groupName = $('#ob-name',m).value.trim(); if(!groupName) return;
-            try { await api('POST','/api/groups',{groupName}); S.user = await api('GET','/api/users/me'); closeModal(); toast('Grupa utworzona. Dodaj teraz konto.'); accountModal(); }
+            try { await api('POST','/api/groups',{groupName}); S.user = await api('GET','/api/users/me'); await reloadCats(); closeModal(); toast('Grupa utworzona. Dodaj teraz konto.'); accountModal(); }
             catch(err){ toast(err.message,'err'); }
         });
     }
@@ -1818,7 +1858,7 @@
         const keyOf = d=>ymKey(d), cur = `${ym.y}-${ym.m}`, prev3 = [1,2,3].map(i=>{ const p=shiftMonth(ym,-i); return `${p.y}-${p.m}`; });
         const budgeted = new Set(list.map(b=>b.categoryId));
         const unb = S.categories.filter(c=>c.type==='EXPENSE' && !budgeted.has(c.id)).map(c=>{
-            const ct = txs.filter(t=>t.categoryName===c.name);
+            const ct = txs.filter(t=>t.categoryId!=null ? t.categoryId===c.id : t.categoryName===c.name);
             const now_ = ct.filter(t=>keyOf(t.transactionDate)===cur).reduce((s,t)=>s+num(t.amount),0);
             const avg = ct.filter(t=>prev3.includes(keyOf(t.transactionDate))).reduce((s,t)=>s+num(t.amount),0)/3;
             return {c, now:now_, avg};
@@ -1838,7 +1878,7 @@
     ${other.length?`<div class="card mb"><div class="card-h"><h3>Budżety w innych walutach</h3></div><div style="padding:8px 0">${other.map(b=>budgetRow(b,pace)).join('')}</div></div>`:''}
     ${unb.length?`<div class="card"><div class="card-h"><h3>Kategorie bez budżetu</h3><span class="faint">sugestia = średnia z 3 poprzednich miesięcy</span></div>
       <div class="list" style="padding:8px 0">${unb.map(x=>{ const sug = Math.max(10, Math.ceil(x.avg/10)*10);
-            return `<div class="li">${catIco(x.c.name,32)}<div class="main-t"><div class="t1">${esc(x.c.name)}</div><div class="t2">w tym miesiącu ${fmtMoney(x.now)} · średnio ${fmtMoney(x.avg)}</div></div>
+            return `<div class="li">${catIco(x.c.name,32)}<div class="main-t"><div class="t1">${esc(catLabel(x.c))}</div><div class="t2">w tym miesiącu ${fmtMoney(x.now)} · średnio ${fmtMoney(x.avg)}</div></div>
         <button class="btn btn-ghost btn-sm" onclick="budgetModal(null,{categoryId:${x.c.id},amount:${sug}})">${icon('plus')}Ustaw ${fmtMoney(sug,null,{compact:true})}</button></div>`; }).join('')}</div></div>`:''}`;
     }
     function budgetModal(id, preset={}){
@@ -1851,7 +1891,7 @@
         if (!edAny && !avail.length){ toast('Wszystkie kategorie wydatków mają już budżet','err'); return; }
         const cs = currencies().length ? currencies() : ['PLN'];
         const m = openModal({title: edAny?'Zmień budżet':'Nowy budżet', body:`
-    <div class="field"><label>Kategoria</label><select class="input" id="bu-cat" ${edAny?'disabled':''}>${(edAny&&ed?cats.filter(c=>c.id===ed.categoryId):avail).map(c=>`<option value="${c.id}" ${c.id===(ed?.categoryId??preset.categoryId)?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
+        <div class="field"><label>Kategoria</label><select class="input" id="bu-cat" ${edAny?'disabled':''}>${(edAny&&ed?cats.filter(c=>c.id===ed.categoryId):avail).map(c=>`<option value="${c.id}" ${c.id===(ed?.categoryId??preset.categoryId)?'selected':''}>${esc(catLabel(c))}</option>`).join('')}</select></div>
     <div class="field amount-input"><input class="input num" type="number" step="1" min="1" id="bu-amt" placeholder="0" value="${ed?num(ed.amount):(preset.amount||'')}"><span id="bu-cur">${esc(ed?.currency||S.currency)}</span></div>
     ${edAny?'':`<div class="field"><label>Waluta</label><select class="input" id="bu-c">${cs.map(c=>`<option ${c===S.currency?'selected':''}>${c}</option>`).join('')}</select><span class="hint">Liczą się wydatki z kont w tej walucie.</span></div>`}
     <div class="note" id="bu-hint"></div>`,
@@ -1962,14 +2002,17 @@
       <div class="field"><label>Koniec (opcjonalnie)</label><input class="input" type="date" id="rc-end" value="${p.endDate||''}"></div></div>
     <label class="switch"><div><b style="font-weight:600">Księguj automatycznie</b><div class="hint">W dniu płatności transakcja doda się sama. Bez tego zobaczysz ją jako zaległą do potwierdzenia.</div></div><input type="checkbox" id="rc-auto" ${p.autoPost?'checked':''}></label>`,
             footer:`${ed?`<button class="btn btn-soft-danger" id="rc-del" style="margin-right:auto">${icon('trash')}Usuń</button>`:''}<button class="btn btn-ghost" data-close>Anuluj</button><button class="btn btn-primary" id="rc-save">${ed?'Zapisz':'Dodaj płatność'}</button>`});
-        const fillSubs = ()=>{ const cat = S.categories.find(c=>String(c.id)===$('#rc-cat',m).value), subs = cat?subsOf(cat):[];
+        const fillSubs = ()=>{ const cat = S.categories.find(c=>String(c.id)===$('#rc-cat',m).value), subs = cat?subsOf(cat, accGroup($('#rc-acc',m).value)):[];
             $('#rc-sub',m).innerHTML = subOptions(subs, p.subcategoryId); };
         const setType = k=>{ type=k; $$('#rc-type button',m).forEach(b=>b.classList.toggle('on',b.dataset.k===k));
-            const cats = S.categories.filter(c=>c.type===k);
-            $('#rc-cat',m).innerHTML = cats.map(c=>`<option value="${c.id}" ${c.id===p.categoryId?'selected':''}>${esc(c.name)}</option>`).join('') || '<option value="">Brak kategorii</option>'; fillSubs(); };
+            const cs = $('#rc-cat',m), prev = cs.value, g = accGroup($('#rc-acc',m).value);
+            const cats = S.categories.filter(c=>c.type===k && usableIn(c, g));
+            cs.innerHTML = cats.map(c=>`<option value="${c.id}" ${c.id===p.categoryId?'selected':''}>${esc(c.name)}</option>`).join('') || '<option value="">Brak kategorii</option>';
+            if (cats.some(c=>String(c.id)===prev)) cs.value = prev;
+            fillSubs(); };
         const updCur = ()=>{ $('#rc-cur',m).textContent = accCur($('#rc-acc',m).value)||'PLN'; };
         $$('#rc-type button',m).forEach(b=>{ b.onclick=()=>{ if(!ed) setType(b.dataset.k); }; if (ed) b.disabled = b.dataset.k!==ed.type; });
-        $('#rc-cat',m).onchange = fillSubs; $('#rc-acc',m).onchange = updCur; setType(type); updCur();
+        $('#rc-cat',m).onchange = fillSubs; $('#rc-acc',m).onchange = ()=>{ updCur(); setType(type); }; setType(type); updCur();
         if (ed) $('#rc-del',m).onclick = ()=>{ closeModal(); deleteRecurring(ed.id); };
         $('#rc-save',m).onclick = e=>withBtn(e.currentTarget, async ()=>{
             const amount = num($('#rc-amt',m).value), categoryId = +$('#rc-cat',m).value||null, subcategoryId = +$('#rc-sub',m).value||null;
@@ -2136,7 +2179,7 @@
                   <div class="card kpi"><div class="lbl"><span class="ico a">${icon('calendar')}</span>Najbliższa rata</div><div class="val">${next?fmtDate(next.nextPaymentDate):'—'}</div><div class="delta">${next?esc(next.name):'brak'}</div></div>
     </div>
     ${loans.map(loanCard).join('')}
-    <div class="note">Rata dzieli się na spłatę kapitału (przelew na kredyt) i odsetki (wydatek w kategorii „Kredyty i pożyczki”). Dopłata państwa nie schodzi z konta i nie jest wydatkiem. Spłacony kredyt (saldo 0) zarchiwizujesz w zakładce Konta. Kredyt na mieszkanie? Dodaj w zakładce Konta konto typu „Nieruchomości” z wartością mieszkania i tą samą datą co saldo kredytu, a wartość netto pokaże mieszkanie minus dług zamiast samego długu.</div>`;
+    <div class="note">Rata dzieli się na spłatę kapitału (przelew na kredyt) i odsetki (wydatek w kategorii „Kredyty i pożyczki”). Dopłata państwa nie schodzi z konta i nie jest wydatkiem. Spłacony kredyt (saldo 0) zarchiwizujesz w zakładce Konta. Kredyt na mieszkanie? Dodaj w zakładce Konta konto typu „Nieruchomości” z wartością mieszkania i datą zakupu, a wartość netto pokaże mieszkanie minus dług zamiast samego długu. Dług widać w historii od daty uruchomienia kredytu: do dnia „Stan na dzień” aplikacja szacuje go z harmonogramu, potem liczy z zapisanych spłat.</div>`;
     }
     function loanCard(l){
         const p = Math.min(num(l.percentRepaid), 100);
@@ -2194,7 +2237,7 @@
     </div>
     <div class="row">
       <div class="field"><label>Pozostało do spłaty (kapitał)</label><input class="input num" type="number" min="0.01" step="0.01" id="ln-out" placeholder="0,00"><span class="hint">Z wyciągu albo z aplikacji banku.</span></div>
-      <div class="field"><label>Stan na dzień</label><input class="input" type="date" id="ln-bdate" value="${isoLocal()}" max="${isoLocal()}"></div>
+            <div class="field"><label>Stan na dzień</label><input class="input" type="date" id="ln-bdate" value="${isoLocal()}" max="${isoLocal()}"><span class="hint">Wcześniej dług w wykresach jest szacowany z harmonogramu od daty uruchomienia.</span></div>
     </div>
     <div class="row">
       <div class="field"><label>Waluta</label><input class="input" id="ln-cur" value="PLN" maxlength="3" style="text-transform:uppercase"></div>

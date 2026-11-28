@@ -16,6 +16,8 @@ public class CategoryMapper {
         categoryDTO.setDescription(category.getDescription());
         categoryDTO.setColor(category.getColor());
         categoryDTO.setType(category.getType());
+        categoryDTO.setGroupId(category.getGroup() == null ? null : category.getGroup().getId());
+        categoryDTO.setSystem(category.isSystem());
         return categoryDTO;
     }
 

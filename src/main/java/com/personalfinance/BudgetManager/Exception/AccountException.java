@@ -1,12 +1,12 @@
 package com.personalfinance.BudgetManager.Exception;
 
-
-
-public class AccountException extends RuntimeException{
+/** Konto nie istnieje albo użytkownik go nie widzi: odpowiedź 404. */
+public class AccountException extends RuntimeException {
     public AccountException(Long id) {
-        super ("Account not found with id: " + id);
+        super("Account not found with id: " + id);
     }
-    public AccountException(String accountNumber){
-        super("Account already exists: " + accountNumber);
+
+    public AccountException(String message) {
+        super(message);
     }
 }

@@ -41,7 +41,7 @@ public class TransactionService {
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new CategoryException(request.getCategoryId()));
         Subcategory subcategory = findSubcategory(request.getSubcategoryId());
-        validateCategory(category, subcategory, request.getType());
+        validateCategory(category, subcategory, request.getType(), account);
         if (request.getType().isOpeningBalance()) {
             throw new IllegalArgumentException("Initial balance is created with the account");
         }
@@ -53,7 +53,6 @@ public class TransactionService {
         }
         requirePositive(request.getAmount());
         applyBalanceChange(account, request.getType(), request.getAmount());
-
 
         Transaction transaction = new Transaction();
         transaction.setAmount(request.getAmount());
@@ -138,7 +137,7 @@ public class TransactionService {
         Subcategory subcategory = resolveSubcategory(transaction.getSubcategory(), category,
                 request.getSubcategoryId(), clearSubcategory);
         if (request.getCategoryId() != null || request.getSubcategoryId() != null) {
-            validateCategory(category, subcategory, transaction.getType());
+            validateCategory(category, subcategory, transaction.getType(), account);
         }
         if (request.getAmount() != null) {
             requirePositive(request.getAmount());
@@ -189,10 +188,18 @@ public class TransactionService {
         return current;
     }
 
-    private void validateCategory(Category category, Subcategory subcategory, CategoryType type) {
+    /**
+     * Typ kategorii musi pasować do transakcji; podkategoria (jeśli jest) musi należeć do kategorii;
+     * obie muszą być systemowe albo z grupy konta.
+     */
+    private void validateCategory(Category category, Subcategory subcategory, CategoryType type, Account account) {
         if (category.getType() != type
                 || (subcategory != null && !subcategory.getCategory().getId().equals(category.getId()))) {
             throw new IllegalArgumentException("Category, subcategory and transaction type must match");
+        }
+        if (!category.isUsableIn(account.getGroup())
+                || (subcategory != null && !subcategory.isUsableIn(account.getGroup()))) {
+            throw new IllegalArgumentException("This category belongs to another group than the account");
         }
     }
 

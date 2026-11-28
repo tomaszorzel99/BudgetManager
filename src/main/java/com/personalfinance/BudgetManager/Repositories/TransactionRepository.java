@@ -1,9 +1,11 @@
 package com.personalfinance.BudgetManager.Repositories;
 
+import com.personalfinance.BudgetManager.Model.Category;
 import com.personalfinance.BudgetManager.Model.CategoryType;
 import com.personalfinance.BudgetManager.Model.Transaction;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -23,6 +25,11 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
     boolean existsByAccountIdAndTypeNotIn(Long id, Collection<CategoryType> types);
     boolean existsByAccountId(Long id);
     void deleteByAccountId(Long id);
+
+    /** Przeniesienie podkategorii do innej kategorii: jej transakcje dostają nową kategorię. */
+    @Modifying(flushAutomatically = true)
+    @Query("UPDATE Transaction t SET t.category = :category WHERE t.subcategory.id = :subcategoryId")
+    int moveSubcategoryToCategory(@Param("subcategoryId") Long subcategoryId, @Param("category") Category category);
 
     /** Czy transakcja jest częścią spłaty kredytu (odsetki lub opłaty); takie zmienia się tylko przez spłatę. */
     @Query("SELECT COUNT(p) > 0 FROM LoanPayment p " +
@@ -106,6 +113,11 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
             "WHERE a.id IN :accountIds AND t.transactionDate <= :endDate")
     List<Transaction> findForHistoricalReport(@Param("accountIds") List<Long> accountIds,
                                               @Param("endDate") LocalDate endDate);
+
+    /** Salda początkowe długu na podanych kontach kredytów (każdy kredyt ma jedno, z dniem „stan na dzień”). */
+    @Query("SELECT t FROM Transaction t JOIN FETCH t.account a WHERE a.id IN :accountIds " +
+            "AND t.type = com.personalfinance.BudgetManager.Model.CategoryType.LIABILITY_OPENING")
+    List<Transaction> findLiabilityOpenings(@Param("accountIds") List<Long> accountIds);
 
     /** Suma wydatków użytkownika wg kategorii w okresie, tylko z kont w danej walucie. */
     @Query("SELECT t.category.id, COALESCE(SUM(t.amount), 0) FROM Transaction t " +

@@ -20,6 +20,11 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
             "WHERE l.id = :id AND u.id = :userId")
     Optional<Loan> findByIdForUser(@Param("id") Long id, @Param("userId") Long userId);
 
+    /** Kredyty przypięte do podanych kont (także zarchiwizowanych), do historii sald. */
+    @Query("SELECT l FROM Loan l WHERE l.account.id IN :accountIds")
+    List<Loan> findByAccountIds(@Param("accountIds") List<Long> accountIds);
+
+
     /** Czy konto ma spłaty kredytu, jako płatnik albo jako konto kredytu. */
     @Query("SELECT COUNT(p) > 0 FROM LoanPayment p " +
             "WHERE p.payerAccount.id = :accountId OR p.loan.account.id = :accountId")

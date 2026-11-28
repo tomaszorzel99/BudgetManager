@@ -14,7 +14,10 @@ public class SubcategoryMapper {
         subcategoryDTO.setId(subcategory.getId());
         subcategoryDTO.setName(subcategory.getName());
         subcategoryDTO.setDescription(subcategory.getDescription());
+        subcategoryDTO.setCategoryId(subcategory.getCategory().getId());
         subcategoryDTO.setCategoryName(subcategory.getCategory().getName());
+        subcategoryDTO.setGroupId(subcategory.getGroup() == null ? null : subcategory.getGroup().getId());
+        subcategoryDTO.setSystem(subcategory.isSystem());
         return subcategoryDTO;
     }
 

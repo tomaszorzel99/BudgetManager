@@ -54,11 +54,11 @@ public class AccountService {
         UserGroup group = user.getUserGroups().stream()
                 .filter(u -> u.getId().equals(request.getGroupId()))
                 .findFirst()
-                .orElseThrow(() -> new AccountException("User does not belong to the specified group"));
+                .orElseThrow(() -> new AccessDeniedException("User does not belong to the specified group"));
 
         Account account = new Account();
         account.setName(request.getName());
-        account.setCurrency(request.getCurrency());
+        account.setCurrency(request.getCurrency().toUpperCase(java.util.Locale.ROOT));
         account.setBalance(request.getInitialBalance());
         account.setGroup(group);
         account.setAccountType(request.getAccountType());
@@ -137,8 +137,22 @@ public class AccountService {
         account.setDeletedAt(LocalDateTime.now());
     }
 
+    /**
+     * Przywraca konto z archiwum. „Dostępne do wydania” zostaje wyłączone (archiwizacja je wyłącza
+     * i nie pamiętamy poprzedniej wartości); można je włączyć w edycji konta.
+     */
+    @Transactional
+    public Account unarchiveAccount(Long id, Long userId) {
+        Account account = getOwnedAccount(id, userId);
+        if (account.getDeletedAt() == null) {
+            throw new IllegalStateException("Account is not archived");
+        }
+        account.setDeletedAt(null);
+        return account;
+    }
 
-    public void updateExistingAccountWithPatch(Account existingAccount, UpdateAccountRequest request){
+
+        public void updateExistingAccountWithPatch(Account existingAccount, UpdateAccountRequest request){
         if (request.getName() != null) existingAccount.setName(request.getName());
         if (request.getAccountType() != null && request.getAccountType() != existingAccount.getAccountType()) {
             if (AccountType.isLiability(request.getAccountType()) || existingAccount.isLiability()) {
@@ -221,14 +235,10 @@ public class AccountService {
     }
 
     private void createInitialTransaction(Account account, BigDecimal amount, LocalDate date, User creator) {
-        Category category = categoryRepository.findAll().stream()
-                .filter(c -> "Initial Balance".equals(c.getName()))
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("Category 'Initial Balance' not found"));
-
-        Subcategory subcategory = subcategoryRepository.findByCategoryName("Initial Balance").stream()
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("Subcategory 'Initial Balance' not found"));
+        // Po kluczu systemowym, nie po nazwie: zmiana nazwy kategorii nie psuje zakładania kont.
+        Category category = categoryRepository.findBySystemKey(SystemCategory.INITIAL_BALANCE)
+                .orElseThrow(() -> new IllegalStateException("System category INITIAL_BALANCE is missing (migration V15)"));
+        Subcategory subcategory = subcategoryRepository.findBySystemKey(SystemCategory.INITIAL_BALANCE).orElse(null);
 
         Transaction transaction = new Transaction();
         transaction.setAmount(amount);

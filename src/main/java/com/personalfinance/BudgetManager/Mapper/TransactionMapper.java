@@ -19,12 +19,13 @@ public class TransactionMapper {
         transactionDTO.setUserName(transaction.getUser().getName());
         transactionDTO.setCategoryId(transaction.getCategory().getId());
         transactionDTO.setCategoryName(transaction.getCategory().getName());
-        transactionDTO.setAccountId(transaction.getAccount().getId());
-        transactionDTO.setAccountName(transaction.getAccount().getName());
         if (transaction.getSubcategory() != null) {
             transactionDTO.setSubcategoryId(transaction.getSubcategory().getId());
             transactionDTO.setSubcategoryName(transaction.getSubcategory().getName());
         }
+        transactionDTO.setAccountId(transaction.getAccount().getId());
+        transactionDTO.setAccountName(transaction.getAccount().getName());
+        transactionDTO.setCurrency(transaction.getAccount().getCurrency());
         return transactionDTO;
     }
 

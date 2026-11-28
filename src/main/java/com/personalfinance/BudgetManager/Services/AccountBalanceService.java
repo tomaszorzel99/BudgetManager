@@ -1,6 +1,7 @@
 package com.personalfinance.BudgetManager.Services;
 
 import com.personalfinance.BudgetManager.Exception.AccountException;
+import com.personalfinance.BudgetManager.Exception.InsufficientFundsException;
 import com.personalfinance.BudgetManager.Model.Account;
 import com.personalfinance.BudgetManager.Model.Transfer;
 import com.personalfinance.BudgetManager.Repositories.AccountRepository;
@@ -113,6 +114,7 @@ public class AccountBalanceService {
         }
     }
     /**
+     /**
      * Konto zwykłe nie może zejść poniżej zera, a konto kredytu powyżej zera
      * (nie da się spłacić więcej, niż wynosi dług). Cofnięcie spłaty kredytu jest dozwolone.
      */
@@ -124,7 +126,7 @@ public class AccountBalanceService {
                         + " (" + account.getBalance().negate() + ")");
             }
         } else if (delta.signum() < 0 && after.signum() < 0) {
-            throw new IllegalArgumentException("Not enough balance in account " + account.getName());
+            throw new InsufficientFundsException(account.getName());
         }
     }
 

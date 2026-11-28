@@ -54,6 +54,10 @@ public class Account extends AuditableEntity {
         return AccountType.isProperty(accountType);
     }
 
+    @Version
+    @Column(nullable = false)
+    private Long version;
+
     @PrePersist
     public void prePersist() {
         if (this.balance == null){

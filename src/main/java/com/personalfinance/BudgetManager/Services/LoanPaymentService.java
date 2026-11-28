@@ -151,7 +151,7 @@ public class LoanPaymentService {
         }
 
         List<LoanPayment> earlier = paymentRepository.findRepaymentsBefore(loanId, paymentDate);
-        LocalDate interestFrom = earlier.isEmpty() ? previousDueDate(loan, paymentDate) : earlier.get(0).getPaymentDate();
+        LocalDate interestFrom = earlier.isEmpty() ? loan.lastDueDateBefore(paymentDate) : earlier.get(0).getPaymentDate();
         BigDecimal subsidizedRate = loan.hasSubsidyOn(paymentDate) ? loan.getSubsidizedRate() : null;
 
         LoanCalculator.Suggestion s = LoanCalculator.suggest(new LoanCalculator.Input(
@@ -194,12 +194,6 @@ public class LoanPaymentService {
                 .orElse(loan.nextPaymentDate(today));
     }
 
-    /** Termin raty miesiąc przed {@code date} (gdy w aplikacji nie ma jeszcze żadnej spłaty), nie wcześniej niż start. */
-    private static LocalDate previousDueDate(Loan loan, LocalDate date) {
-        LocalDate month = date.minusMonths(1);
-        LocalDate due = month.withDayOfMonth(Math.min(loan.getPaymentDay(), month.lengthOfMonth()));
-        return due.isBefore(loan.getStartDate()) ? loan.getStartDate() : due;
-    }
 
     // ---------------------------------------------------------------- wyrównanie do wyciągu
 
@@ -235,8 +229,7 @@ public class LoanPaymentService {
             Category adjustment = systemCategory(SystemCategory.ADJUSTMENT);
             t.setType(CategoryType.ADJUSTMENT);
             t.setCategory(adjustment);
-            t.setSubcategory(subcategoryRepository.findByCategoryName(adjustment.getName()).stream()
-                    .filter(s -> "Korekta manualna".equals(s.getName())).findFirst().orElse(null));
+            t.setSubcategory(subcategoryRepository.findBySystemKey(SystemCategory.ADJUSTMENT_MANUAL).orElse(null));
         }
         accountBalanceService.applyDeltas(Map.of(account.getId(), diff.negate()));
         transactionRepository.save(t);

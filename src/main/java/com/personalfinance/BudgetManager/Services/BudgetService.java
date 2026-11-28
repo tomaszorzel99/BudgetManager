@@ -65,6 +65,11 @@ public class BudgetService {
         User user = userRepository.findById(userId).orElseThrow(() -> new UserException(userId));
         Category category = categoryRepository.findById(request.categoryId())
                 .orElseThrow(() -> new CategoryException(request.categoryId()));
+        // Kategoria cudzej grupy jest dla użytkownika niewidoczna, więc „nie istnieje” (404).
+        if (!category.isSystem()
+                && (category.getGroup() == null || !UserGroupService.isMember(user, category.getGroup()))) {
+            throw new CategoryException(request.categoryId());
+        }
         if (category.getType() != CategoryType.EXPENSE) {
             throw new IllegalArgumentException("Budgets can only be set for expense categories");
         }

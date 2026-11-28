@@ -2,6 +2,7 @@ package com.personalfinance.BudgetManager.Services;
 
 import com.personalfinance.BudgetManager.Model.InstallmentType;
 import com.personalfinance.BudgetManager.Model.LoanPaymentKind;
+import com.personalfinance.BudgetManager.Model.Loan;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -108,6 +109,65 @@ public final class LoanCalculator {
         BigDecimal payment = outstanding.multiply(q).multiply(factor)
                 .divide(factor.subtract(BigDecimal.ONE), MC);
         return payment.subtract(outstanding.multiply(q)).setScale(2, RoundingMode.HALF_UP);
+    }
+
+
+    /**
+     * Szacowany dług w dniu {@code date}, gdy kredyt wpisano do aplikacji z saldem na dzień
+     * późniejszy niż start ({@code balanceDate}). Dług rośnie do kwoty z umowy w dniu startu,
+     * a potem maleje w rytmie rat z harmonogramu, tak żeby w dniu salda był równy kwocie
+     * z wyciągu ({@code outstandingAtBalanceDate}). Rata malejąca: co miesiąc ta sama część
+     * kapitału. Rata równa: część kapitałowa rośnie z każdą ratą. Przed startem: 0.
+     * Nadpłaty i zmiany oprocentowania sprzed salda rozkładają się równo na raty, bo ich daty
+     * nie są znane; kwota w dniu salda zawsze zgadza się z wyciągiem.
+     */
+    public static BigDecimal estimatedOutstanding(Loan loan, LocalDate balanceDate,
+                                                  BigDecimal outstandingAtBalanceDate, LocalDate date) {
+        if (date.isBefore(loan.getStartDate())) {
+            return zero();
+        }
+        if (!date.isBefore(balanceDate)) {
+            return money(outstandingAtBalanceDate);
+        }
+        BigDecimal original = loan.getOriginalPrincipal();
+        double repaidByBalanceDate = repaidShare(loan, installmentsDue(loan, balanceDate));
+        if (repaidByBalanceDate <= 0) {
+            return money(original);
+        }
+        double share = repaidShare(loan, installmentsDue(loan, date)) / repaidByBalanceDate;
+        BigDecimal repaid = original.subtract(outstandingAtBalanceDate);
+        return money(original.subtract(repaid.multiply(BigDecimal.valueOf(share))));
+    }
+
+    /**
+     * Liczba rat z terminem w dniu {@code date} lub wcześniej. Pierwsza rata przypada
+     * w miesiącu po starcie kredytu, w dniu płatności (31. w krótszym miesiącu to jego ostatni dzień).
+     */
+    static int installmentsDue(Loan loan, LocalDate date) {
+        YearMonth first = YearMonth.from(loan.getStartDate()).plusMonths(1);
+        int count = 0;
+        while (count < loan.getTermMonths()) {
+            YearMonth month = first.plusMonths(count);
+            LocalDate due = month.atDay(Math.min(loan.getPaymentDay(), month.lengthOfMonth()));
+            if (due.isAfter(date)) {
+                break;
+            }
+            count++;
+        }
+        return count;
+    }
+
+    /**
+     * Część kapitału spłacona po {@code installments} ratach według harmonogramu z umowy (0–1).
+     * Rata malejąca: k/n. Rata równa: ((1+q)^k − 1) / ((1+q)^n − 1), q to stopa miesięczna.
+     */
+    static double repaidShare(Loan loan, int installments) {
+        int n = loan.getTermMonths();
+        double q = loan.getAnnualInterestRate().doubleValue() / 1200.0;
+        if (loan.getInstallmentType() != InstallmentType.ANNUITY || q == 0) {
+            return (double) installments / n;
+        }
+        return (Math.pow(1 + q, installments) - 1) / (Math.pow(1 + q, n) - 1);
     }
 
     private static BigDecimal money(BigDecimal value) {

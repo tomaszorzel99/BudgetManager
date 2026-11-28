@@ -1,5 +1,6 @@
 package com.personalfinance.BudgetManager.Repositories;
 
+import com.personalfinance.BudgetManager.Model.Category;
 import com.personalfinance.BudgetManager.Model.RecurringTransaction;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -23,6 +24,12 @@ public interface RecurringTransactionRepository extends JpaRepository<RecurringT
     List<RecurringTransaction> findDueForAutoPost(@Param("date") LocalDate date);
 
     boolean existsByAccountId(Long accountId);
+    boolean existsByCategoryId(Long categoryId);
+
+    /** Przeniesienie podkategorii do innej kategorii: stałe wydatki z tą podkategorią idą razem z nią. */
+    @Modifying(flushAutomatically = true)
+    @Query("UPDATE RecurringTransaction r SET r.category = :category WHERE r.subcategory.id = :subcategoryId")
+    int moveSubcategoryToCategory(@Param("subcategoryId") Long subcategoryId, @Param("category") Category category);
 
     @Modifying
     @Query("DELETE FROM RecurringTransaction r WHERE r.account.id = :accountId")

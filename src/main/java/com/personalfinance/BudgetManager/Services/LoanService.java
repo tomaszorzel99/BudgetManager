@@ -25,7 +25,6 @@ import java.util.Locale;
 @Service
 public class LoanService {
 
-    static final String OPENING_CATEGORY = "Initial Balance";
     private static final BigDecimal HUNDRED = new BigDecimal("100");
 
     private final LoanRepository loanRepository;
@@ -195,10 +194,9 @@ public class LoanService {
     }
 
     private void createOpeningTransaction(Account account, BigDecimal amount, LocalDate date, User user) {
-        Category category = categoryRepository.findFirstByName(OPENING_CATEGORY)
-                .orElseThrow(() -> new IllegalStateException("Category '" + OPENING_CATEGORY + "' not found"));
-        Subcategory subcategory = subcategoryRepository.findByCategoryName(OPENING_CATEGORY).stream()
-                .findFirst().orElse(null);
+        Category category = categoryRepository.findBySystemKey(SystemCategory.INITIAL_BALANCE)
+                .orElseThrow(() -> new IllegalStateException("System category INITIAL_BALANCE is missing (migration V15)"));
+        Subcategory subcategory = subcategoryRepository.findBySystemKey(SystemCategory.INITIAL_BALANCE).orElse(null);
         Transaction transaction = new Transaction();
         transaction.setAmount(amount);
         transaction.setType(CategoryType.LIABILITY_OPENING);

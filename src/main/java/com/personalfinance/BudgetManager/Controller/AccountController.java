@@ -1,6 +1,7 @@
 package com.personalfinance.BudgetManager.Controller;
 
 import com.personalfinance.BudgetManager.Controller.DTO.CustomUserDetails;
+import java.nio.file.AccessDeniedException;
 import com.personalfinance.BudgetManager.DTO.AccountDTO;
 import com.personalfinance.BudgetManager.DTO.AccountHistoryDTO;
 import com.personalfinance.BudgetManager.DTO.CreateAccountRequest;
@@ -84,6 +85,14 @@ public class AccountController {
         Long userId = userDetails.getId();
         accountService.archiveAccount(id,  userId);
         return ResponseEntity.noContent().build();
+    }
+
+    /** Przywrócenie konta z archiwum. */
+    @PatchMapping("/{id}/unarchive")
+    public ResponseEntity<AccountDTO> unarchiveAccount(@PathVariable Long id,
+                                                       @AuthenticationPrincipal CustomUserDetails userDetails) {
+        Account account = accountService.unarchiveAccount(id, userDetails.getId());
+        return ResponseEntity.ok(accountMapper.convertToDTO(account));
     }
 
     @DeleteMapping("/{id}")

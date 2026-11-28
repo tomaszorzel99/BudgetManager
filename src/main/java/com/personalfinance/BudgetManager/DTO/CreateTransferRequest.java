@@ -3,6 +3,7 @@ package com.personalfinance.BudgetManager.DTO;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -25,6 +26,7 @@ public class CreateTransferRequest {
     @DecimalMin("0.000000000001")
     private BigDecimal exchangeRate;
 
+    @Size(max = 255, message = "Description is too long")
     private String description;
 
     private LocalDate transferDate;

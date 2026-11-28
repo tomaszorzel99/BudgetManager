@@ -98,7 +98,9 @@ public class RecurringTransactionService {
         if (clearSubcategory && request.subcategoryId() != null) {
             throw new IllegalArgumentException("Pass either subcategoryId or clearSubcategory, not both");
         }
-        if (request.categoryId() != null || request.subcategoryId() != null || clearSubcategory) {
+        // Po zmianie konta kategoria jest sprawdzana jeszcze raz: musi pasować do grupy nowego konta.
+        if (request.categoryId() != null || request.subcategoryId() != null || clearSubcategory
+                || request.accountId() != null) {
             Long categoryId = request.categoryId() != null ? request.categoryId() : recurring.getCategory().getId();
             Long subcategoryId;
             if (clearSubcategory) {
@@ -109,6 +111,7 @@ public class RecurringTransactionService {
                     && recurring.getSubcategory().getCategory().getId().equals(categoryId)) {
                 subcategoryId = recurring.getSubcategory().getId();
             } else {
+                // nowa kategoria, a stara podkategoria do niej nie należy
                 subcategoryId = null;
             }
             applyCategory(recurring, categoryId, subcategoryId);
@@ -243,12 +246,14 @@ public class RecurringTransactionService {
                 .orElseThrow(() -> new SubcategoryException(subcategoryId));
         if (category.getType() != recurring.getType()
                 || (subcategory != null && !subcategory.getCategory().getId().equals(category.getId()))) {
-//        if (category.getType() != recurring.getType() || !subcategory.getCategory().getId().equals(category.getId())) {
-//            throw new IllegalArgumentException("Category, subcategory and transaction type must match");
-//        }
-            recurring.setCategory(category);
-            recurring.setSubcategory(subcategory);
+            throw new IllegalArgumentException("Category, subcategory and transaction type must match");
         }
+        UserGroup group = recurring.getAccount().getGroup();
+        if (!category.isUsableIn(group) || (subcategory != null && !subcategory.isUsableIn(group))) {
+            throw new IllegalArgumentException("This category belongs to another group than the account");
+        }
+        recurring.setCategory(category);
+        recurring.setSubcategory(subcategory);
     }
 
     private static void requireIncomeOrExpense(CategoryType type) {

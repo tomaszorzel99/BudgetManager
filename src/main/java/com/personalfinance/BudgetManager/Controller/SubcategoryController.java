@@ -2,15 +2,13 @@ package com.personalfinance.BudgetManager.Controller;
 
 import com.personalfinance.BudgetManager.DTO.CreateSubcategoryRequest;
 import com.personalfinance.BudgetManager.DTO.SubcategoryDTO;
-import com.personalfinance.BudgetManager.DTO.UpdateSubcategoryRequst;
+import com.personalfinance.BudgetManager.DTO.UpdateSubcategoryRequest;
 import com.personalfinance.BudgetManager.Mapper.SubcategoryMapper;
 import com.personalfinance.BudgetManager.Model.Subcategory;
 import com.personalfinance.BudgetManager.Services.SubcategoryService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -47,9 +45,8 @@ public class SubcategoryController {
 
     @PatchMapping("/{id}")
     public ResponseEntity<SubcategoryDTO> updateSubcategory(@PathVariable Long id,
-                                                            @Valid @RequestBody UpdateSubcategoryRequst request,
-                                                            @AuthenticationPrincipal UserDetails userDetails){
-        Subcategory subcategory = subcategoryService.updateSubcategory(id, request, userDetails.getUsername());
+                                                            @Valid @RequestBody UpdateSubcategoryRequest request){
+        Subcategory subcategory = subcategoryService.updateSubcategory(id, request);
         return ResponseEntity.ok().body(subcategoryMapper.convertToDTO(subcategory));
     }
 }

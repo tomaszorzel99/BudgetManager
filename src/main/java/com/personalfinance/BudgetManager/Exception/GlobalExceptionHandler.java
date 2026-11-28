@@ -1,24 +1,38 @@
 package com.personalfinance.BudgetManager.Exception;
 
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.personalfinance.BudgetManager.DTO.ApiError;
+import jakarta.persistence.OptimisticLockException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.transaction.TransactionSystemException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.time.DateTimeException;
 import java.time.LocalDateTime;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 
@@ -93,6 +107,12 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.CONFLICT, exception.getMessage(), request);
     }
 
+    @ExceptionHandler({ConcurrencyFailureException.class, OptimisticLockException.class})
+    public ResponseEntity<ApiError> handleConcurrentModification(Exception exception, HttpServletRequest request){
+        log.warn("Concurrent modification for {}: {}", request.getRequestURI(), exception.getMessage());
+        return buildError(HttpStatus.CONFLICT, "The data was changed by someone else at the same time. Refresh and try again.", request);
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiError> handleDataIntegrity(DataIntegrityViolationException exception, HttpServletRequest request){
         log.warn("Data integrity violation for {}: {}", request.getRequestURI(), exception.getMostSpecificCause().getMessage());
@@ -128,6 +148,77 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException exception, HttpServletRequest request) {
         return buildError(HttpStatus.BAD_REQUEST, "Invalid value for parameter: " + exception.getName(), request);
+    }
+
+    /** Zły JSON, puste ciało żądania albo wartość nie do odczytania (np. "type":"FOO", "amount":"abc"). */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleUnreadableBody(HttpMessageNotReadableException exception, HttpServletRequest request) {
+        if (exception.getCause() instanceof MismatchedInputException mismatch && !mismatch.getPath().isEmpty()) {
+            String field = mismatch.getPath().stream()
+                    .map(ref -> ref.getFieldName() != null ? ref.getFieldName() : "[" + ref.getIndex() + "]")
+                    .collect(Collectors.joining("."));
+            return buildError(HttpStatus.BAD_REQUEST, "Invalid value for field: " + field, request);
+        }
+        return buildError(HttpStatus.BAD_REQUEST, "Request body is missing or is not valid JSON", request);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiError> handleMissingParameter(MissingServletRequestParameterException exception, HttpServletRequest request) {
+        return buildError(HttpStatus.BAD_REQUEST, "Missing required parameter: " + exception.getParameterName(), request);
+    }
+
+    /** Np. month=13 albo 31 lutego: LocalDate.of rzuca DateTimeException. */
+    @ExceptionHandler(DateTimeException.class)
+    public ResponseEntity<ApiError> handleInvalidDate(DateTimeException exception, HttpServletRequest request) {
+        return buildError(HttpStatus.BAD_REQUEST, "Invalid date: " + exception.getMessage(), request);
+    }
+
+    /** Walidacja encji przy zapisie (np. pusta nazwa konta), gdy nie złapało jej DTO. */
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiError> handleConstraintViolation(ConstraintViolationException exception, HttpServletRequest request) {
+        return buildError(HttpStatus.BAD_REQUEST, violationMessages(exception.getConstraintViolations()), request);
+    }
+
+    /** Hibernate sprawdza encje dopiero przy zatwierdzaniu; wtedy błąd walidacji przychodzi opakowany. */
+    @ExceptionHandler(TransactionSystemException.class)
+    public ResponseEntity<ApiError> handleTransactionSystem(TransactionSystemException exception, HttpServletRequest request) {
+        if (exception.getRootCause() instanceof ConstraintViolationException violation) {
+            return buildError(HttpStatus.BAD_REQUEST, violationMessages(violation.getConstraintViolations()), request);
+        }
+        return handleGenericException(exception, request);
+    }
+
+    private static String violationMessages(Set<ConstraintViolation<?>> violations) {
+        return violations.stream()
+                .map(ConstraintViolation::getMessage)
+                .sorted()
+                .collect(Collectors.joining("; "));
+    }
+
+
+    //  404 / 405 / 415 — zły adres, metoda albo format żądania
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiError> handleNoResource(NoResourceFoundException exception, HttpServletRequest request) {
+        return buildError(HttpStatus.NOT_FOUND, "Not found", request);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiError> handleMethodNotSupported(HttpRequestMethodNotSupportedException exception, HttpServletRequest request) {
+        ResponseEntity<ApiError> response = buildError(HttpStatus.METHOD_NOT_ALLOWED,
+                "HTTP method " + exception.getMethod() + " is not supported for this path", request);
+        Set<HttpMethod> allowed = exception.getSupportedHttpMethods();
+        if (allowed == null || allowed.isEmpty()) {
+            return response;
+        }
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                .allow(allowed.toArray(HttpMethod[]::new))
+                .body(response.getBody());
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiError> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException exception, HttpServletRequest request) {
+        return buildError(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Content-Type must be application/json", request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

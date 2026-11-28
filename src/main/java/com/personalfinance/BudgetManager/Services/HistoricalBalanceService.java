@@ -3,6 +3,7 @@ package com.personalfinance.BudgetManager.Services;
 import com.personalfinance.BudgetManager.DTO.BalanceAtDateDTO;
 import com.personalfinance.BudgetManager.Model.*;
 import com.personalfinance.BudgetManager.Repositories.AccountRepository;
+import com.personalfinance.BudgetManager.Repositories.LoanRepository;
 import com.personalfinance.BudgetManager.Repositories.TransactionRepository;
 import com.personalfinance.BudgetManager.Repositories.TransferRepository;
 import org.springframework.stereotype.Service;
@@ -20,11 +21,14 @@ public class HistoricalBalanceService {
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
     private  final TransferRepository transferRepository;
+    private final LoanRepository loanRepository;
 
-    public HistoricalBalanceService(AccountRepository accountRepository, TransactionRepository transactionRepository, TransferRepository transferRepository) {
+    public HistoricalBalanceService(AccountRepository accountRepository, TransactionRepository transactionRepository,
+                                    TransferRepository transferRepository, LoanRepository loanRepository) {
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
         this.transferRepository = transferRepository;
+        this.loanRepository = loanRepository;
     }
 
     public BalanceAtDateDTO calculate(Long userId, LocalDate date){
@@ -79,6 +83,8 @@ public class HistoricalBalanceService {
             }
         }
 
+        addEstimatedLoanDebt(ids, date, balances);
+
         BigDecimal total = BigDecimal.ZERO;
         BigDecimal savings = BigDecimal.ZERO;
         BigDecimal investments = BigDecimal.ZERO;
@@ -116,5 +122,37 @@ public class HistoricalBalanceService {
 
         return new BalanceAtDateDTO(
                 date, currency, total, savings, investments, liabilities, property);
+    }
+
+    /**
+     * Kredyt wpisany z saldem „stan na dzień” późniejszym niż start (np. hipoteka sprzed 3 lat
+     * dodana dziś): bez tego dług pojawiłby się w historii dopiero w dniu salda, a mieszkanie
+     * od dnia zakupu. Między startem a dniem salda dodajemy dług szacowany z harmonogramu
+     * ({@link LoanCalculator#estimatedOutstanding}). Od dnia salda liczą się już tylko transakcje.
+     * Niczego nie zapisujemy w bazie: to tylko widok historii.
+     */
+    private void addEstimatedLoanDebt(List<Long> accountIds, LocalDate date, Map<Long, BigDecimal> balances) {
+        List<Loan> loans = loanRepository.findByAccountIds(accountIds).stream()
+                .filter(l -> !date.isBefore(l.getStartDate()))
+                .toList();
+        if (loans.isEmpty()) {
+            return;
+        }
+        List<Long> loanAccountIds = loans.stream().map(l -> l.getAccount().getId()).toList();
+        Map<Long, Transaction> openings = new HashMap<>();
+        for (Transaction opening : transactionRepository.findLiabilityOpenings(loanAccountIds)) {
+            openings.merge(opening.getAccount().getId(), opening,
+                    (a, b) -> a.getTransactionDate().isBefore(b.getTransactionDate()) ? a : b);
+        }
+        for (Loan loan : loans) {
+            Long accountId = loan.getAccount().getId();
+            Transaction opening = openings.get(accountId);
+            if (opening == null || !date.isBefore(opening.getTransactionDate())) {
+                continue;
+            }
+            BigDecimal debt = LoanCalculator.estimatedOutstanding(
+                    loan, opening.getTransactionDate(), opening.getAmount(), date);
+            balances.merge(accountId, debt.negate(), BigDecimal::add);
+        }
     }
 }

@@ -14,10 +14,13 @@ public class UserGroupService {
 
     private final UserGroupRepository userGroupRepository;
     private final UserService userService;
+    private final CategoryService categoryService;
 
-    public UserGroupService(UserGroupRepository userGroupRepository, UserService userService) {
+    public UserGroupService(UserGroupRepository userGroupRepository, UserService userService,
+                            CategoryService categoryService) {
         this.userGroupRepository = userGroupRepository;
         this.userService = userService;
+        this.categoryService = categoryService;
     }
 
     public UserGroup getById(Long id) {
@@ -47,6 +50,8 @@ public class UserGroupService {
         currentUser.getUserGroups().add(userGroup);
         userGroup.getUsers().add(currentUser);
 
+        // Kategorie należą do grupy, więc nowa grupa dostaje podstawowy zestaw na start.
+        categoryService.createDefaultCategories(userGroup);
         return userGroup;
     }
 }

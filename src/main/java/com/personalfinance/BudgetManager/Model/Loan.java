@@ -111,4 +111,18 @@ public class Loan extends AuditableEntity {
         }
         return candidate;
     }
+
+    /**
+     * Ostatni termin raty przed dniem {@code date} (bez tego dnia), nie wcześniej niż start kredytu.
+     * Od niego biegną odsetki, gdy w aplikacji nie ma jeszcze żadnej spłaty: nadpłata 7.11 przy racie
+     * płatnej 5. liczy odsetki od 5.11, a rata 5.12 od 5.11.
+     */
+    public LocalDate lastDueDateBefore(LocalDate date) {
+        LocalDate due = date.withDayOfMonth(Math.min(paymentDay, date.lengthOfMonth()));
+        if (!due.isBefore(date)) {
+            LocalDate previous = date.minusMonths(1);
+            due = previous.withDayOfMonth(Math.min(paymentDay, previous.lengthOfMonth()));
+        }
+        return due.isBefore(startDate) ? startDate : due;
+    }
 }
