@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/** Kredyt z podsumowaniem. Kwoty długu są dodatnie (saldo konta LOAN ze zmienionym znakiem). */
+
 public record LoanDTO(
         Long id,
         Long accountId,
@@ -35,10 +35,8 @@ public record LoanDTO(
         LocalDateTime createdAt,
         BigDecimal subsidizedRate,
         LocalDate subsidyEndDate,
-        /** Suma spłaconego kapitału z rat zapisanych w aplikacji. */
         BigDecimal installmentPrincipalPaid,
         BigDecimal overpaidPrincipal,
-        /** Odsetki zapłacone z własnej kieszeni (po dopłacie). */
         BigDecimal interestPaid,
         BigDecimal subsidyReceived,
         BigDecimal feesPaid,

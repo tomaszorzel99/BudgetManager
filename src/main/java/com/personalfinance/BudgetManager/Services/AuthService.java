@@ -7,7 +7,7 @@ import com.personalfinance.BudgetManager.Exception.EmailException;
 import com.personalfinance.BudgetManager.Exception.TooManyLoginAttemptsException;
 import com.personalfinance.BudgetManager.Model.User;
 import com.personalfinance.BudgetManager.Repositories.UserRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

@@ -5,7 +5,6 @@ import com.personalfinance.BudgetManager.Model.CategoryType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/** Jedno przyszłe (lub zaległe) wystąpienie transakcji cyklicznej. */
 public record UpcomingPaymentDTO(
         Long recurringId,
         LocalDate date,

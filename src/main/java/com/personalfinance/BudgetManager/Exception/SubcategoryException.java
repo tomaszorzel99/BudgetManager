@@ -5,8 +5,5 @@ public class SubcategoryException extends RuntimeException {
         super("Subcategory not found with id: " + id);
     }
 
-    public SubcategoryException(String name) {
-        super("Subcategory not found with name: " + name);
-    }
 }
 

@@ -13,7 +13,6 @@ public interface SubcategoryRepository extends JpaRepository<Subcategory, Long> 
     Optional<Subcategory> findById(Long id);
     Optional<Subcategory> findBySystemKey(String systemKey);
 
-    /** Podkategorie systemowe i podkategorie podanych grup, razem z kategorią (bez N+1 w mapperze). */
     @Query("SELECT s FROM Subcategory s JOIN FETCH s.category "
             + "WHERE s.systemKey IS NOT NULL OR s.group.id IN :groupIds ORDER BY s.name")
     List<Subcategory> findVisible(@Param("groupIds") Collection<Long> groupIds);

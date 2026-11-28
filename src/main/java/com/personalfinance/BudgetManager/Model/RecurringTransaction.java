@@ -11,7 +11,6 @@ import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/** Szablon transakcji powtarzającej się (czynsz, subskrypcja, pensja). */
 @Entity
 @Table(name = "recurring_transactions")
 @Getter
@@ -69,7 +68,6 @@ public class RecurringTransaction extends AuditableEntity {
     @Column(nullable = false)
     private boolean active = true;
 
-    /** Przesuwa termin o jeden okres; po dacie końcowej szablon się wyłącza. */
     public void advance() {
         nextDate = frequency.next(nextDate, startDate);
         if (endDate != null && nextDate.isAfter(endDate)) {

@@ -9,10 +9,6 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/**
- * Cel oszczędnościowy. Postęp to saldo powiązanego konta albo, gdy konta nie ma,
- * suma ręcznych wpłat zapisana w {@code savedAmount}.
- */
 @Entity
 @Table(name = "savings_goals")
 @Getter

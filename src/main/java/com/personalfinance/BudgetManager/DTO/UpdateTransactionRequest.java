@@ -19,6 +19,5 @@ public class UpdateTransactionRequest {
     private LocalDate transactionDate;
     private Long categoryId;
     private Long subcategoryId;
-    /** true = usuń podkategorię z transakcji. Nie łączyć z subcategoryId. */
     private Boolean clearSubcategory;
 }

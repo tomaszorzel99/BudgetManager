@@ -8,7 +8,6 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 
-/** Zmiana częściowa: pola null zostają bez zmian. */
 @Data
 public class UpdateAccountRequest {
 

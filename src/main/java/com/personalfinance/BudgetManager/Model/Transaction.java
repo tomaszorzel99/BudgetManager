@@ -10,7 +10,6 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 
 @Entity
@@ -55,14 +54,9 @@ public class Transaction extends AuditableEntity {
     private Category category;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    /** Opcjonalna: null = transakcja bez podkategorii (V13). */
     @JoinColumn(name = "subcategory_id")
     private Subcategory subcategory;
 
-    /**
-     * Kwota musi być dodatnia. Wyjątek: korekta może być ujemna (spadek wyceny nieruchomości, V16),
-     * żeby obniżenie wartości mieszkania nie trafiało do wydatków.
-     */
     @AssertTrue(message = "Amount must be greater than 0")
     public boolean isAmountValid() {
         if (amount == null || type == null) {
@@ -71,7 +65,6 @@ public class Transaction extends AuditableEntity {
         return amount.signum() > 0 || (type == CategoryType.ADJUSTMENT && amount.signum() < 0);
     }
 
-    /** Kwota ze znakiem, z jakim zmienia saldo konta (wydatek i saldo początkowe długu na minus). */
     public BigDecimal signedAmount() {
         return type.signed(amount);
     }

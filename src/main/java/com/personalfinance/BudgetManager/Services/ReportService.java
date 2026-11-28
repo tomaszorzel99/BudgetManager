@@ -12,16 +12,15 @@ import com.personalfinance.BudgetManager.Model.LoanPaymentKind;
 import com.personalfinance.BudgetManager.Model.SystemCategory;
 import com.personalfinance.BudgetManager.Model.User;
 import com.personalfinance.BudgetManager.Repositories.*;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.Month;
 import java.time.YearMonth;
-import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 @Service
 public class ReportService {
@@ -42,24 +41,24 @@ public class ReportService {
         this.loanPaymentRepository = loanPaymentRepository;
     }
 
-    public MonthlyReportDTO getMonthlyReport(String userEmail, int month, int year){
+    @Transactional(readOnly = true)
+    public MonthlyReportDTO getMonthlyReport(String userEmail, int month, int year, Long groupId){
 
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.plusMonths(1).minusDays(1);
 
-        User user = userRepository.findByEmail(userEmail).orElseThrow(() -> new UserException(userEmail));
-        BigDecimal income = transactionRepository.getTotalIncomeByMonth(user.getId(), CategoryType.INCOME, startDate, endDate);
-        BigDecimal expenses = transactionRepository.getTotalExpensesByMonth(user.getId(), CategoryType.EXPENSE, startDate, endDate);
-        BigDecimal transfersToSavings = transferRepository.getTotalTransfersToTypeByMonth(user.getId(), AccountType.SAVINGS, month, year);
-        BigDecimal transfersFromSavings = transferRepository.getTotalTransfersFromTypeByMonth(user.getId(), AccountType.SAVINGS, month, year);
+        List<Long> groups = groupIds(userEmail, groupId);
+        BigDecimal income = transactionRepository.sumByTypeBetween(groups, CategoryType.INCOME, startDate, endDate);
+        BigDecimal expenses = transactionRepository.sumByTypeBetween(groups, CategoryType.EXPENSE, startDate, endDate);
+        BigDecimal transfersToSavings = transferRepository.getTotalTransfersToTypeByMonth(groups, AccountType.SAVINGS, month, year);
+        BigDecimal transfersFromSavings = transferRepository.getTotalTransfersFromTypeByMonth(groups, AccountType.SAVINGS, month, year);
         BigDecimal netSavings = transfersToSavings.subtract(transfersFromSavings);
 
-        // Kredyty: kapitał spłacony to przesunięcie majątku, nie wydatek; koszty (odsetki, opłaty) są już w expenses.
-        BigDecimal principal = loanPaymentRepository.sumPrincipal(user.getId(), LoanPaymentKind.INSTALLMENT, startDate, endDate);
-        BigDecimal overpayments = loanPaymentRepository.sumPrincipal(user.getId(), LoanPaymentKind.OVERPAYMENT, startDate, endDate);
-        BigDecimal disbursements = loanPaymentRepository.sumPrincipal(user.getId(), LoanPaymentKind.DISBURSEMENT, startDate, endDate);
-        BigDecimal loanCosts = transactionRepository.getTotalExpensesBySystemCategory(user.getId(), SystemCategory.LOAN_COSTS, startDate, endDate);
-        BigDecimal subsidy = loanPaymentRepository.sumSubsidy(user.getId(), startDate, endDate);
+        BigDecimal principal = loanPaymentRepository.sumPrincipal(groups, LoanPaymentKind.INSTALLMENT, startDate, endDate);
+        BigDecimal overpayments = loanPaymentRepository.sumPrincipal(groups, LoanPaymentKind.OVERPAYMENT, startDate, endDate);
+        BigDecimal disbursements = loanPaymentRepository.sumPrincipal(groups, LoanPaymentKind.DISBURSEMENT, startDate, endDate);
+        BigDecimal loanCosts = transactionRepository.getTotalExpensesBySystemCategory(groups, SystemCategory.LOAN_COSTS, startDate, endDate);
+        BigDecimal subsidy = loanPaymentRepository.sumSubsidy(groups, startDate, endDate);
 
         return MonthlyReportDTO.builder()
                 .month(month)
@@ -80,27 +79,28 @@ public class ReportService {
                 .build();
     }
 
-    public CumulativeReportDTO getCumulativeReport(String userEmail, int month, int year) {
+    /** Raport narastający dla kont grup użytkownika (bez groupId: wszystkich jego grup). */
+    @Transactional(readOnly = true)
+    public CumulativeReportDTO getCumulativeReport(String userEmail, int month, int year, Long groupId) {
         LocalDate endDate = effectiveDate(checkedMonth(month, year));
-        //LocalDate endDate = LocalDate.of(year, month, 1).plusMonths(1).minusDays(1);
 
-        User user = userRepository.findByEmail(userEmail).orElseThrow(() -> new UserException(userEmail));
-        BigDecimal totalIncome = transactionRepository.getCumulativeIncome(user.getId(),CategoryType.INCOME, endDate);
-        BigDecimal totalExpenses = transactionRepository.getCumulativeExpenses(user.getId(), CategoryType.EXPENSE, endDate);
-        BigDecimal totalTransfersToSavings = transferRepository.getCumulativeTransfersToType(user.getId(), AccountType.SAVINGS, endDate);
-        BigDecimal totalTransfersFromSavings = transferRepository.getCumulativeTransfersFromType(user.getId(), AccountType.SAVINGS, endDate);
-        BigDecimal currentAvailableBalance = accountRepository.getTotalAvailableBalance(user.getId());
-        BigDecimal currentSavingBalance = accountRepository.getTotalBalanceByType(user.getId(), AccountType.SAVINGS);
-        BigDecimal currentInvestmentBalance = accountRepository.getTotalBalanceByType(user.getId(), AccountType.INVESTMENT);
-        BigDecimal currentTotalBalance = accountRepository.getTotalBalance(user.getId());
-        BalanceAtDateDTO historical = historicalBalanceService.calculate(user.getId(), endDate);
-        BigDecimal currentLiabilities = accountRepository.getTotalBalanceByType(user.getId(), AccountType.LOAN).negate();
-        BigDecimal currentProperty = accountRepository.getTotalBalanceByType(user.getId(), AccountType.PROPERTY);
+        List<Long> groups = groupIds(userEmail, groupId);
+        BigDecimal totalIncome = transactionRepository.sumByTypeUntil(groups, CategoryType.INCOME, endDate);
+        BigDecimal totalExpenses = transactionRepository.sumByTypeUntil(groups, CategoryType.EXPENSE, endDate);
+        BigDecimal totalTransfersToSavings = transferRepository.getCumulativeTransfersToType(groups, AccountType.SAVINGS, endDate);
+        BigDecimal totalTransfersFromSavings = transferRepository.getCumulativeTransfersFromType(groups, AccountType.SAVINGS, endDate);
+        BigDecimal currentAvailableBalance = accountRepository.getTotalAvailableBalance(groups);
+        BigDecimal currentSavingBalance = accountRepository.getTotalBalanceByType(groups, AccountType.SAVINGS);
+        BigDecimal currentInvestmentBalance = accountRepository.getTotalBalanceByType(groups, AccountType.INVESTMENT);
+        BigDecimal currentTotalBalance = accountRepository.getTotalBalance(groups);
+        BalanceAtDateDTO historical = historicalBalanceService.calculate(groups, endDate);
+        BigDecimal currentLiabilities = accountRepository.getTotalBalanceByType(groups, AccountType.LOAN).negate();
+        BigDecimal currentProperty = accountRepository.getTotalBalanceByType(groups, AccountType.PROPERTY);
         LocalDate since = LocalDate.of(1, 1, 1);
-        BigDecimal totalPrincipal = loanPaymentRepository.sumPrincipal(user.getId(), LoanPaymentKind.INSTALLMENT, since, endDate);
-        BigDecimal totalOverpayments = loanPaymentRepository.sumPrincipal(user.getId(), LoanPaymentKind.OVERPAYMENT, since, endDate);
-        BigDecimal totalLoanCosts = transactionRepository.getTotalExpensesBySystemCategory(user.getId(), SystemCategory.LOAN_COSTS, since, endDate);
-        BigDecimal totalSubsidy = loanPaymentRepository.sumSubsidy(user.getId(), since, endDate);
+        BigDecimal totalPrincipal = loanPaymentRepository.sumPrincipal(groups, LoanPaymentKind.INSTALLMENT, since, endDate);
+        BigDecimal totalOverpayments = loanPaymentRepository.sumPrincipal(groups, LoanPaymentKind.OVERPAYMENT, since, endDate);
+        BigDecimal totalLoanCosts = transactionRepository.getTotalExpensesBySystemCategory(groups, SystemCategory.LOAN_COSTS, since, endDate);
+        BigDecimal totalSubsidy = loanPaymentRepository.sumSubsidy(groups, since, endDate);
 
         return CumulativeReportDTO.builder()
                 .month(month)
@@ -136,39 +136,42 @@ public class ReportService {
                 .build();
     }
 
-    public ComprehensiveReportDTO getComprehensiveReport(String userEmail, int month, int year) {
+    @Transactional(readOnly = true)
+    public ComprehensiveReportDTO getComprehensiveReport(String userEmail, int month, int year, Long groupId) {
         return ComprehensiveReportDTO.builder()
                 .month(month)
                 .year(year)
-                .monthly(getMonthlyReport(userEmail, month, year))
-                .cumulative(getCumulativeReport(userEmail, month, year))
+                .monthly(getMonthlyReport(userEmail, month, year, groupId))
+                .cumulative(getCumulativeReport(userEmail, month, year, groupId))
                 .build();
     }
 
-        public List<BalanceAtDateDTO> getBalanceHistory(
-                String userEmail, int month, int year, int months) {
-
-            YearMonth lastMonth = checkedMonth(month, year);
-
-            if (months < 1 || months > 36) {
-                throw new IllegalArgumentException(
-                        "months must be between 1 and 36");
-            }
-
-            User user = userRepository.findByEmail(userEmail)
-                    .orElseThrow(() -> new UserException(userEmail));
-
-            List<BalanceAtDateDTO> points = new ArrayList<>();
-
-            for (int i = months - 1; i >= 0; i--) {
-                YearMonth period = lastMonth.minusMonths(i);
-
-                points.add(historicalBalanceService.calculate(
-                        user.getId(), effectiveDate(period)));
-            }
-
-            return points;
+    @Transactional(readOnly = true)
+    public List<BalanceAtDateDTO> getBalanceHistory(String userEmail, int month, int year, int months, Long groupId) {
+        YearMonth lastMonth = checkedMonth(month, year);
+        if (months < 1 || months > 36) {
+            throw new IllegalArgumentException("months must be between 1 and 36");
         }
+        List<Long> groups = groupIds(userEmail, groupId);
+        List<BalanceAtDateDTO> points = new ArrayList<>();
+        for (int i = months - 1; i >= 0; i--) {
+            YearMonth period = lastMonth.minusMonths(i);
+            points.add(historicalBalanceService.calculate(groups, effectiveDate(period)));
+        }
+        return points;
+    }
+
+    /** Wszystkie grupy użytkownika albo jedna wybrana (wtedy musi do niej należeć). */
+    private List<Long> groupIds(String userEmail, Long groupId) {
+        User user = userRepository.findByEmail(userEmail).orElseThrow(() -> new UserException(userEmail));
+        if (groupId == null) {
+            return CategoryService.groupIds(user);
+        }
+        if (user.getUserGroups().stream().noneMatch(g -> g.getId().equals(groupId))) {
+            throw new AccessDeniedException("No access to this group");
+        }
+        return List.of(groupId);
+    }
 
     private YearMonth checkedMonth(int month, int year) {
         if (month < 1 || month > 12 || year < 1 || year > 9999) {

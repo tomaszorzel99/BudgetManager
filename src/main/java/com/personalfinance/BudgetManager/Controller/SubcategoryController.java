@@ -26,26 +26,26 @@ public class SubcategoryController {
     }
 
     @PostMapping
-    public ResponseEntity<SubcategoryDTO> createSubcategory (@Valid @RequestBody CreateSubcategoryRequest request){
+    public ResponseEntity<SubcategoryDTO> createSubcategory(@Valid @RequestBody CreateSubcategoryRequest request) {
         Subcategory subcategory = subcategoryService.createSubcategory(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(subcategoryMapper.convertToDTO(subcategory));
     }
 
     @GetMapping
-    public ResponseEntity<List<SubcategoryDTO>> getAllSubcategories(){
+    public ResponseEntity<List<SubcategoryDTO>> getAllSubcategories() {
         List<Subcategory> allSubcategories = subcategoryService.getAllSubcateries();
         return ResponseEntity.ok().body(subcategoryMapper.convertToListDTO(allSubcategories));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSubcategory(@PathVariable Long id){
+    public ResponseEntity<Void> deleteSubcategory(@PathVariable Long id) {
         subcategoryService.deleteSubcategoriesById(id);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}")
     public ResponseEntity<SubcategoryDTO> updateSubcategory(@PathVariable Long id,
-                                                            @Valid @RequestBody UpdateSubcategoryRequest request){
+                                                            @Valid @RequestBody UpdateSubcategoryRequest request) {
         Subcategory subcategory = subcategoryService.updateSubcategory(id, request);
         return ResponseEntity.ok().body(subcategoryMapper.convertToDTO(subcategory));
     }

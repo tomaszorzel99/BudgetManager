@@ -9,10 +9,6 @@ public enum RecurrenceFrequency {
     QUARTERLY,
     YEARLY;
 
-    /**
-     * Następny termin po {@code current}. Dla okresów miesięcznych dzień miesiąca
-     * bierzemy z daty startu, żeby 31. nie „zjeżdżał” na 28. po lutym.
-     */
     public LocalDate next(LocalDate current, LocalDate start) {
         return switch (this) {
             case WEEKLY -> current.plusWeeks(1);
@@ -23,7 +19,6 @@ public enum RecurrenceFrequency {
         };
     }
 
-    /** Przybliżona liczba wystąpień w miesiącu, do szacowania kosztu miesięcznego. */
     public double perMonth() {
         return switch (this) {
             case WEEKLY -> 52.0 / 12;

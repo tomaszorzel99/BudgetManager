@@ -2,6 +2,7 @@ package com.personalfinance.BudgetManager.Controller;
 
 import com.personalfinance.BudgetManager.DTO.CreateGroupRequest;
 import com.personalfinance.BudgetManager.DTO.UserGroupDTO;
+import com.personalfinance.BudgetManager.Mapper.UserMapper;
 import com.personalfinance.BudgetManager.Model.UserGroup;
 import com.personalfinance.BudgetManager.Services.UserGroupService;
 import jakarta.validation.Valid;
@@ -17,18 +18,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class GroupController {
 
     private final UserGroupService userGroupService;
+    private final UserMapper userMapper;
 
-    public GroupController(UserGroupService userGroupService) {
+    public GroupController(UserGroupService userGroupService, UserMapper userMapper) {
         this.userGroupService = userGroupService;
+        this.userMapper = userMapper;
     }
 
-    /** Zwraca utworzoną grupę ({@code id}, {@code name}), więc front nie musi dociągać /api/users/me. */
     @PostMapping("/groups")
     public ResponseEntity<UserGroupDTO> createGroup(@Valid @RequestBody CreateGroupRequest request) {
         UserGroup group = userGroupService.createGroup(request);
-        UserGroupDTO dto = new UserGroupDTO();
-        dto.setId(group.getId());
-        dto.setName(group.getName());
-        return ResponseEntity.status(HttpStatus.CREATED).body(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(userMapper.mapGroup(group));
     }
 }

@@ -30,4 +30,12 @@ public class UserGroup extends AuditableEntity {
     @ManyToMany(mappedBy = "userGroups")
     private Set<User> users = new HashSet<>();
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id")
+    private User owner;
+
+    public boolean isOwnedBy(Long userId) {
+        return owner != null && userId != null && userId.equals(owner.getId());
+    }
+
 }

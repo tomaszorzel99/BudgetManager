@@ -33,7 +33,5 @@ public class CreateTransactionRequest {
 
     @NotNull(message = "Category id cannot be null")
     private Long categoryId;
-
-    /** Opcjonalna. Brak = transakcja bez podkategorii („Bez podkategorii” we froncie). */
     private Long subcategoryId;
 }

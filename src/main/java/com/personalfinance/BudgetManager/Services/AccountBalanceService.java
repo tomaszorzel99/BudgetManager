@@ -5,17 +5,15 @@ import com.personalfinance.BudgetManager.Exception.InsufficientFundsException;
 import com.personalfinance.BudgetManager.Model.Account;
 import com.personalfinance.BudgetManager.Model.Transfer;
 import com.personalfinance.BudgetManager.Repositories.AccountRepository;
-import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeSet;
 
-//import static com.personalfinance.BudgetManager.Exception.GlobalExceptionHandler.log;
-import static org.springframework.data.jpa.domain.AbstractPersistable_.id;
 
 @Service
 @Slf4j
@@ -158,12 +156,12 @@ public class AccountBalanceService {
     //        log.info("Transferred {} from account {} to account {}",
 //                amount, fromAccountId, toAccountId);
 //    }
-    @Transactional
-    public void addIncome(Long accountId, BigDecimal amount) {
-        Account account = accountRepository.findByIdWithLock(accountId).orElseThrow(() -> new AccountException(accountId));
-        account.setBalance(account.getBalance().add(amount));
-        accountRepository.save(account);
-    }
+//    @Transactional
+//    public void addIncome(Long accountId, BigDecimal amount) {
+//        Account account = accountRepository.findByIdWithLock(accountId).orElseThrow(() -> new AccountException(accountId));
+//        account.setBalance(account.getBalance().add(amount));
+//        accountRepository.save(account);
+//    }
 
 //    public void addIncome(Long accountId, BigDecimal amount) {
 //        Account account = accountRepository.findByIdWithLock(accountId).orElseThrow(() -> new AccountException(accountId));
@@ -171,11 +169,11 @@ public class AccountBalanceService {
 //        accountRepository.save(account);
 //    }
 
-    @Transactional
-    public void addExpense(Long accountId, BigDecimal amount) {
-        Account account = accountRepository.findByIdWithLock(accountId).orElseThrow(() -> new AccountException(accountId));
-        account.setBalance(account.getBalance().subtract(amount));
-    }
+//    @Transactional
+//    public void addExpense(Long accountId, BigDecimal amount) {
+//        Account account = accountRepository.findByIdWithLock(accountId).orElseThrow(() -> new AccountException(accountId));
+//        account.setBalance(account.getBalance().subtract(amount));
+//    }
 
 //    public void addExpense(Long accountId, BigDecimal amount) {
 //        Account account = accountRepository.findByIdWithLock(accountId).orElseThrow(() -> new AccountException(accountId));

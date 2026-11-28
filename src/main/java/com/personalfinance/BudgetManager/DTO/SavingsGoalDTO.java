@@ -4,10 +4,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/**
- * Cel z policzonym postępem. currentAmount to saldo powiązanego konta albo suma wpłat.
- * monthlyNeeded: ile trzeba odkładać miesięcznie, by zdążyć na targetDate (null bez daty).
- */
 public record SavingsGoalDTO(
         Long id,
         String name,

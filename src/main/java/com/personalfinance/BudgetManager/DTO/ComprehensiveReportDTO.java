@@ -10,7 +10,6 @@ public class ComprehensiveReportDTO {
 
     private int month;
     private int year;
-
     private MonthlyReportDTO monthly;
     private CumulativeReportDTO cumulative;
 }

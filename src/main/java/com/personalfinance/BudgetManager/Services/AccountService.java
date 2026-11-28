@@ -97,20 +97,22 @@ public class AccountService {
         return accountRepository.save(account);
     }
 
+
     @Transactional
     public void deleteAccountById(Long id, Long userId) throws AccessDeniedException {
         Account account = getOwnedAccount(id, userId);
+        requireGroupOwner(account, userId);
 
         boolean hasRealTransaction = transactionRepository.existsByAccountIdAndTypeNotIn(id,
                 List.of(CategoryType.INITIAL_BALANCE, CategoryType.LIABILITY_OPENING));
         if (hasRealTransaction) {
             throw new IllegalStateException("Cannot delete account with transactions. Please archive the account instead.");
         }
-        if (loanRepository.hasPayments(id)) {
-            throw new IllegalStateException("Cannot delete account with loan payments. Please archive the account instead.");
-        }
         if (transferRepository.existsByFromAccountIdOrToAccountId(id, id)) {
             throw new IllegalStateException("Cannot delete account with transfers. Please archive the account instead.");
+        }
+        if (loanRepository.hasPayments(id)) {
+            throw new IllegalStateException("Cannot delete account with loan payments. Please archive the account instead.");
         }
         recurringTransactionRepository.deleteAllForAccount(id);
         savingsGoalRepository.unlinkAccount(id);
@@ -120,15 +122,17 @@ public class AccountService {
         accountRepository.delete(account);
     }
 
+
     @Transactional
     public void archiveAccount(Long id, Long userId) throws AccessDeniedException {
         Account account = getOwnedAccount(id, userId);
+        requireGroupOwner(account, userId);
 
         if (account.getDeletedAt() != null) {
             throw new IllegalStateException("Account is already archived");
         }
 
-                if (account.getBalance().compareTo(BigDecimal.ZERO) != 0){
+        if (account.getBalance().compareTo(BigDecimal.ZERO) != 0){
             throw new IllegalStateException("Cannot delete account with non-zero balance. Current balance: " +
                     account.getBalance());
         }
@@ -144,6 +148,7 @@ public class AccountService {
     @Transactional
     public Account unarchiveAccount(Long id, Long userId) {
         Account account = getOwnedAccount(id, userId);
+        requireGroupOwner(account, userId);
         if (account.getDeletedAt() == null) {
             throw new IllegalStateException("Account is not archived");
         }
@@ -255,5 +260,12 @@ public class AccountService {
     private Account getOwnedAccount(Long id, Long userId) throws AccessDeniedException {
         return accountRepository.findByIdAndGroupUsersId(id, userId).
                 orElseThrow(() -> new AccountException("Account not found or access denied"));
+    }
+
+    /** Archiwizacja, przywrócenie i usunięcie konta wspólnego: tylko właściciel grupy. */
+    private static void requireGroupOwner(Account account, Long userId) {
+        if (!account.getGroup().isOwnedBy(userId)) {
+            throw new AccessDeniedException("Only the group owner can do this");
+        }
     }
 }

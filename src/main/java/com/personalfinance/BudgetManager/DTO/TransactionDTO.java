@@ -17,8 +17,8 @@ public class TransactionDTO {
     private LocalDateTime createdDate;
     private Long accountId;
     private String accountName;
-    /** Waluta konta transakcji (także konta zarchiwizowanego). */
     private String currency;
+    private Long userId;
     private String userName;
     private Long categoryId;
     private Long subcategoryId;

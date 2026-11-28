@@ -32,11 +32,9 @@ public class Category {
     @Column(nullable = false)
     private CategoryType type;
 
-    /** Klucz kategorii systemowej (np. LOAN_COSTS); null dla kategorii użytkownika. */
     @Column(name = "system_key", length = 40, unique = true, updatable = false)
     private String systemKey;
 
-    /** Grupa, do której należy kategoria; null dla kategorii systemowych, wspólnych dla wszystkich. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "group_id")
     private UserGroup group;
@@ -45,7 +43,6 @@ public class Category {
         return systemKey != null;
     }
 
-    /** Kategorię systemową można użyć wszędzie, kategorię grupy tylko na kontach tej grupy. */
     public boolean isUsableIn(UserGroup accountGroup) {
         return isSystem() || (group != null && accountGroup != null && group.getId().equals(accountGroup.getId()));
     }

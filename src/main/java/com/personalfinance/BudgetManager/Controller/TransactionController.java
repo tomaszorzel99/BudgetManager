@@ -1,22 +1,20 @@
 package com.personalfinance.BudgetManager.Controller;
 
-import com.personalfinance.BudgetManager.DTO.CreateTransactionRequest;
-import java.nio.file.AccessDeniedException;
-import com.personalfinance.BudgetManager.DTO.TransactionDTO;
-import com.personalfinance.BudgetManager.DTO.UpdateTransactionRequest;
+import com.personalfinance.BudgetManager.DTO.*;
 import com.personalfinance.BudgetManager.Mapper.TransactionMapper;
 import com.personalfinance.BudgetManager.Model.CategoryType;
 import com.personalfinance.BudgetManager.Model.Transaction;
-import com.personalfinance.BudgetManager.Services.GroupService;
 import com.personalfinance.BudgetManager.Services.TransactionService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
-import java.nio.file.AccessDeniedException;
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -44,11 +42,34 @@ public class TransactionController {
             @RequestParam(required = false) Integer year,
             @RequestParam(required = false) CategoryType categoryType,
             @RequestParam(required = false) Long categoryId,
+            @RequestParam(defaultValue = "false") boolean mine,
             @AuthenticationPrincipal UserDetails userDetails) {
 
         String userEmail = userDetails.getUsername();
-        List<Transaction> transactions = transactionService.getTransactions(groupId, userEmail, month, year, categoryType, categoryId);
+        List<Transaction> transactions = transactionService.getTransactions(groupId, userEmail, month, year, categoryType, categoryId, mine);
         return ResponseEntity.ok(transactionMapper.convertToListDTO(transactions));
+    }
+
+    @GetMapping("/page")
+    public ResponseEntity<TransactionPageDTO> getTransactionPage(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(required = false) Long groupId,
+            @RequestParam(defaultValue = "false") boolean mine,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) CategoryType type,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long accountId,
+            @RequestParam(required = false) String q,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        TransactionFilter filter = new TransactionFilter(groupId, mine, from, to, type, categoryId, accountId, q);
+        TransactionService.TransactionPage result =
+                transactionService.getTransactionPage(userDetails.getUsername(), filter, page, size);
+        Page<Transaction> p = result.page();
+        return ResponseEntity.ok(new TransactionPageDTO(transactionMapper.convertToListDTO(p.getContent()),
+                p.getNumber(), p.getSize(), p.getTotalElements(), p.getTotalPages(), result.totals()));
     }
 
     @DeleteMapping("/{id}")

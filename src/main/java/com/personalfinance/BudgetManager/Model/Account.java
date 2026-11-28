@@ -3,7 +3,6 @@ package com.personalfinance.BudgetManager.Model;
 
 import com.personalfinance.BudgetManager.Audit.AuditableEntity;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -29,12 +28,13 @@ public class Account extends AuditableEntity {
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)
-    @Column(name = "account_type", length = 30)
+    @Column(name = "account_type", length = 30, nullable = false)
     private AccountType accountType;
 
     @NotBlank(message = "Currency cannot be blank")
     private String currency;
 
+    @Column(nullable = false, precision = 38, scale = 2)
     private BigDecimal balance;
 
     private Boolean availableForSpending = true;
@@ -60,7 +60,6 @@ public class Account extends AuditableEntity {
 
     @PrePersist
     public void prePersist() {
-        if (this.balance == null){
-        }
+        if (this.balance == null){}
     }
 }

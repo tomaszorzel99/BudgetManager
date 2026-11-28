@@ -10,8 +10,9 @@ import com.personalfinance.BudgetManager.Model.User;
 import com.personalfinance.BudgetManager.Repositories.AccountRepository;
 import com.personalfinance.BudgetManager.Repositories.TransferRepository;
 import com.personalfinance.BudgetManager.Repositories.UserRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -74,25 +75,29 @@ public class TransferService {
         return transferRepository.save(transfer);
     }
 
-    public List<Transfer> getTransfers(String userEmail, Long accountId, Integer month, Integer year) {
+    /**
+     * Przelewy, w których jedno z kont należy do grup użytkownika (bez groupId: wszystkich jego grup),
+     * od najnowszych. mine = true zostawia tylko przelewy zalogowanej osoby.
+     */
+    @Transactional(readOnly = true)
+    public List<Transfer> getTransfers(String userEmail, Long accountId, Integer month, Integer year,
+                                       Long groupId, boolean mine) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new UserException(userEmail));
-
-        if (accountId != null && month != null && year != null) {
-            LocalDate startDate = LocalDate.of(year, month, 1);
-            LocalDate endDate = startDate.plusMonths(1).minusDays(1);
-            return transferRepository.findByUserAndAccountAndDateBetween(user.getId(), accountId, startDate, endDate);
-        } else if (accountId != null) {
-            return transferRepository.findByUserAndAccount(user.getId(), accountId);
-        } else if (month != null && year != null) {
-            LocalDate startDate = LocalDate.of(year, month, 1);
-            LocalDate endDate = startDate.plusMonths(1).minusDays(1);
-            return transferRepository.findByUserAndDateBetween(user.getId(), startDate, endDate);
-        } else {
-            return transferRepository.findByUserId(user.getId());
+        if (groupId != null && user.getUserGroups().stream().noneMatch(g -> g.getId().equals(groupId))) {
+            throw new AccessDeniedException("No access to this group");
         }
+        List<Long> groupIds = groupId != null ? List.of(groupId) : CategoryService.groupIds(user);
+        LocalDate from = null;
+        LocalDate to = null;
+        if (month != null && year != null) {
+            from = LocalDate.of(year, month, 1);
+            to = from.plusMonths(1).minusDays(1);
+        }
+        return transferRepository.findVisible(groupIds, mine ? user.getId() : null, accountId, from, to);
     }
 
+    @Transactional(readOnly = true)
     public Transfer getTransferById(Long transferId, String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new UserException(userEmail));
@@ -100,7 +105,7 @@ public class TransferService {
         Transfer transfer = transferRepository.findById(transferId)
                 .orElseThrow(() -> new TransferException(transferId));
 
-        if (!transfer.getUser().getId().equals(user.getId())) {
+        if (!isMember(transfer, user.getId())) {
             throw new SecurityException("You don't have access to this transfer");
         }
         return transfer;
@@ -137,10 +142,6 @@ public class TransferService {
 
     @Transactional
     public void deleteTransfer(Long transferId, String userEmail) {
-
-//        Transfer transfer = getTransferById(transferId, userEmail);
-
-//        Transfer transfer = getTransferById(transferId, userEmail);
         Transfer transfer = getTransferForWrite(transferId, userEmail);
         rejectLoanAccounts(transfer.getFromAccount(), transfer.getToAccount());
         accountBalanceService.transfer(
@@ -210,9 +211,22 @@ public class TransferService {
                 .orElseThrow(() -> new UserException(userEmail));
         Transfer transfer = transferRepository.findByIdWithLock(transferId)
                 .orElseThrow(() -> new TransferException(transferId));
-        if (!transfer.getUser().getId().equals(user.getId())) {
+        if (!isMember(transfer, user.getId())) {
             throw new SecurityException("You don't have access to this transfer");
         }
+        // Zmienia autor albo właściciel grupy konta, z którego wyszły pieniądze.
+        if (!transfer.getUser().getId().equals(user.getId())
+                && !transfer.getFromAccount().getGroup().isOwnedBy(user.getId())) {
+            throw new SecurityException("Only the author or the group owner can change this transfer");
+        }
         return transfer;
+    }
+    /** Przelew widzą członkowie grupy któregokolwiek z jego kont. */
+    private static boolean isMember(Transfer transfer, Long userId) {
+        return isMember(transfer.getFromAccount(), userId) || isMember(transfer.getToAccount(), userId);
+    }
+
+    private static boolean isMember(Account account, Long userId) {
+        return account.getGroup().getUsers().stream().anyMatch(u -> u.getId().equals(userId));
     }
 }

@@ -1,14 +1,19 @@
 package com.personalfinance.BudgetManager.Services;
 
 import com.personalfinance.BudgetManager.DTO.CreateTransactionRequest;
+import com.personalfinance.BudgetManager.DTO.CurrencyTotalsDTO;
+import com.personalfinance.BudgetManager.DTO.TransactionFilter;
 import com.personalfinance.BudgetManager.DTO.UpdateTransactionRequest;
 import com.personalfinance.BudgetManager.Exception.*;
 import com.personalfinance.BudgetManager.Model.*;
 import com.personalfinance.BudgetManager.Repositories.*;
-import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -67,27 +72,25 @@ public class TransactionService {
         return transactionRepository.save(transaction);
     }
 
-    @Transactional
+    /** Największa strona listy transakcji. */
+    static final int MAX_PAGE_SIZE = 200;
+    private static final Sort NEWEST_FIRST = Sort.by(Sort.Order.desc("transactionDate"), Sort.Order.desc("id"));
+    /** Strona transakcji i sumy dla całego filtra. */
+    public record TransactionPage(Page<Transaction> page, List<CurrencyTotalsDTO> totals) {
+    }
+
+    /**
+     * Pełna lista (pulpit, raporty we froncie). Bez groupId obejmuje konta wszystkich grup
+     * użytkownika, a nie tylko jego wpisy; mine = true zostawia tylko wpisy zalogowanej osoby.
+     */
+    @Transactional(readOnly = true)
     public List<Transaction> getTransactions(
-            Long groupId, String userEmail, Integer month, Integer year, CategoryType type, Long categoryId) {
+            Long groupId, String userEmail, Integer month, Integer year, CategoryType type, Long categoryId,
+            boolean mine) {
 
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new UserException(userEmail));
-        Long userId = user.getId();
-
-        if (groupId != null && user.getUserGroups().stream()
-                .noneMatch(g -> g.getId().equals(groupId))) {
-            throw new AccessDeniedException("No access to this group");
-        }
-
-        Specification<Transaction> spec;
-
-
-        if (groupId != null) {
-            spec = TransactionSpecification.belongsToGroup(groupId);
-        } else {
-            spec = TransactionSpecification.hasUser(userId);
-        }
+        Specification<Transaction> spec = scope(user, groupId, mine);
         if (type != null) {
             spec = spec.and(TransactionSpecification.hasType(type));
         }
@@ -97,16 +100,48 @@ public class TransactionService {
         if (month != null && year != null) {
             spec = spec.and(TransactionSpecification.inMonth(month, year));
         }
+        return transactionRepository.findAll(spec, NEWEST_FIRST);
+    }
 
-        return transactionRepository.findAll(spec);
+    /** Lista transakcji po stronach (od najnowszych) z filtrami po stronie serwera. */
+    @Transactional(readOnly = true)
+    public TransactionPage getTransactionPage(String userEmail, TransactionFilter filter, int page, int size) {
+        if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
+            throw new IllegalArgumentException("Page must be 0 or more and size between 1 and " + MAX_PAGE_SIZE);
+        }
+        if (filter.from() != null && filter.to() != null && filter.from().isAfter(filter.to())) {
+            throw new IllegalArgumentException("The start date must not be after the end date");
+        }
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UserException(userEmail));
+        Specification<Transaction> spec = scope(user, filter.groupId(), filter.mine());
+        if (filter.from() != null) spec = spec.and(TransactionSpecification.from(filter.from()));
+        if (filter.to() != null) spec = spec.and(TransactionSpecification.to(filter.to()));
+        if (filter.type() != null) spec = spec.and(TransactionSpecification.hasType(filter.type()));
+        if (filter.categoryId() != null) spec = spec.and(TransactionSpecification.hasCategory(filter.categoryId()));
+        if (filter.accountId() != null) spec = spec.and(TransactionSpecification.hasAccount(filter.accountId()));
+        if (filter.q() != null && !filter.q().isBlank()) spec = spec.and(TransactionSpecification.matches(filter.q()));
+
+        Page<Transaction> result = transactionRepository.findAll(spec, PageRequest.of(page, size, NEWEST_FIRST));
+        return new TransactionPage(result, transactionRepository.totalsByCurrency(spec));
+    }
+
+    /** Konta jednej grupy (użytkownik musi do niej należeć) albo wszystkich jego grup; opcjonalnie tylko jego wpisy. */
+    private static Specification<Transaction> scope(User user, Long groupId, boolean mine) {
+        if (groupId != null && user.getUserGroups().stream().noneMatch(g -> g.getId().equals(groupId))) {
+            throw new AccessDeniedException("No access to this group");
+        }
+        Specification<Transaction> spec = groupId != null
+                ? TransactionSpecification.belongsToGroup(groupId)
+                : TransactionSpecification.inGroups(CategoryService.groupIds(user));
+        return mine ? spec.and(TransactionSpecification.hasUser(user.getId())) : spec;
     }
 
     @Transactional
     public void deleteTransactionById(Long id) {
 
         Long userId = userService.getCurrentUser().getId();
-        Transaction transaction = transactionRepository.findByIdAndUserId(id, userId)
-                .orElseThrow(() -> new AccessDeniedException("No access to this transaction"));
+        Transaction transaction = editableTransaction(id, userId);
 
         if (transaction.getType().isOpeningBalance()) {
             throw new IllegalArgumentException("Initial balance transaction cannot be deleted");
@@ -120,8 +155,7 @@ public class TransactionService {
     @Transactional
     public Transaction updateTransaction(Long id, UpdateTransactionRequest request) {
         Long userId = userService.getCurrentUser().getId();
-        Transaction transaction = transactionRepository.findByIdAndUserId(id, userId)
-                .orElseThrow(() -> new AccessDeniedException("No access to this transaction"));
+        Transaction transaction = editableTransaction(id, userId);
         if (transaction.getType().isOpeningBalance()) {
             throw new IllegalArgumentException("Initial balance transaction cannot be edited");
         }
@@ -147,6 +181,24 @@ public class TransactionService {
         transaction.setCategory(category);
         transaction.setSubcategory(subcategory);
         return transactionRepository.save(transaction);
+    }
+
+    /**
+     * Transakcję zmienia lub usuwa jej autor albo właściciel grupy konta. Pozostali członkowie
+     * grupy ją widzą, ale nie mogą jej zmienić; osoba spoza grupy dostaje ten sam błąd co dotąd.
+     */
+    private Transaction editableTransaction(Long id, Long userId) {
+        Transaction transaction = transactionRepository.findById(id)
+                .orElseThrow(() -> new AccessDeniedException("No access to this transaction"));
+        UserGroup group = transaction.getAccount().getGroup();
+        boolean member = group.getUsers().stream().anyMatch(u -> u.getId().equals(userId));
+        if (!member) {
+            throw new AccessDeniedException("No access to this transaction");
+        }
+        if (!transaction.getUser().getId().equals(userId) && !group.isOwnedBy(userId)) {
+            throw new AccessDeniedException("Only the author or the group owner can change this transaction");
+        }
+        return transaction;
     }
 
     /** Odsetki i opłaty ze spłaty kredytu zmienia się razem ze spłatą, inaczej rozjechałyby się salda. */

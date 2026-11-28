@@ -34,7 +34,7 @@ public class InvitationService {
     public InvitationResponse inviteUserToGroup(String inviterEmail, Long groupId, String rawEmail) {
         User inviter = userService.getUserByEmail(inviterEmail);
         UserGroup group = userGroupService.getById(groupId);
-        userGroupService.ensureUserIsMember(inviter, group);
+        UserGroupService.ensureUserIsOwner(inviter, group);
 
         String email = AuthService.normalizeEmail(rawEmail);
         boolean alreadyInGroup = group.getUsers().stream()

@@ -1,7 +1,6 @@
 package com.personalfinance.BudgetManager.Controller;
 
 import com.personalfinance.BudgetManager.Controller.DTO.CustomUserDetails;
-import java.nio.file.AccessDeniedException;
 import com.personalfinance.BudgetManager.DTO.AccountDTO;
 import com.personalfinance.BudgetManager.DTO.AccountHistoryDTO;
 import com.personalfinance.BudgetManager.DTO.CreateAccountRequest;
@@ -9,21 +8,15 @@ import com.personalfinance.BudgetManager.DTO.UpdateAccountRequest;
 import com.personalfinance.BudgetManager.DTO.PropertyValueRequest;
 import com.personalfinance.BudgetManager.Mapper.AccountMapper;
 import com.personalfinance.BudgetManager.Model.Account;
-import com.personalfinance.BudgetManager.Model.User;
 import com.personalfinance.BudgetManager.Services.AccountHistoryService;
 import com.personalfinance.BudgetManager.Services.AccountService;
 import com.personalfinance.BudgetManager.Services.UserService;
-import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
-import java.nio.file.AccessDeniedException;
 import java.util.List;
 
 @RestController
@@ -49,7 +42,6 @@ public class AccountController {
     }
 
     @PostMapping
-    @Transactional
     public ResponseEntity<AccountDTO> createAccount(@Valid @RequestBody CreateAccountRequest request,
                                                     @AuthenticationPrincipal CustomUserDetails userDetails){
         Account account = accountService.createAccount(request, userDetails.getId());
@@ -72,7 +64,6 @@ public class AccountController {
         return ResponseEntity.ok().body(accountMapper.convertToDTO(updatedAccount));
     }
 
-    /** Nowa wycena nieruchomości (tylko konto typu PROPERTY). */
     @PostMapping("/{id}/value")
     public ResponseEntity<AccountDTO> revalueProperty(@PathVariable Long id, @Valid @RequestBody PropertyValueRequest request,
                                                       @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -87,7 +78,6 @@ public class AccountController {
         return ResponseEntity.noContent().build();
     }
 
-    /** Przywrócenie konta z archiwum. */
     @PatchMapping("/{id}/unarchive")
     public ResponseEntity<AccountDTO> unarchiveAccount(@PathVariable Long id,
                                                        @AuthenticationPrincipal CustomUserDetails userDetails) {

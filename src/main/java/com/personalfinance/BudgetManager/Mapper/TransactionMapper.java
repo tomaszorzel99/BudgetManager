@@ -16,6 +16,7 @@ public class TransactionMapper {
         transactionDTO.setDescription(transaction.getDescription());
         transactionDTO.setTransactionDate(transaction.getTransactionDate());
         transactionDTO.setCreatedDate(transaction.getCreatedAt());
+        transactionDTO.setUserId(transaction.getUser().getId());
         transactionDTO.setUserName(transaction.getUser().getName());
         transactionDTO.setCategoryId(transaction.getCategory().getId());
         transactionDTO.setCategoryName(transaction.getCategory().getName());

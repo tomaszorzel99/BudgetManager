@@ -108,13 +108,19 @@ public class BudgetService {
         return toDTO(budget, spent, now);
     }
 
+    /**
+     * Wydane w kategoriach: wszystkie wydatki na kontach grup użytkownika (także partnera ze wspólnego
+     * konta), bo kategoria należy do grupy, a budżet pilnuje wydatków domu, nie tylko własnych.
+     */
     private Map<Long, BigDecimal> spentByCategory(Long userId, String currency, LocalDate start, LocalDate end) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new UserException(userId));
         Map<Long, BigDecimal> spent = new HashMap<>();
-        for (Object[] row : transactionRepository.sumExpensesByCategory(userId, currency, start, end)) {
+        for (Object[] row : transactionRepository.sumExpensesByCategory(CategoryService.groupIds(user), currency, start, end)) {
             spent.put((Long) row[0], (BigDecimal) row[1]);
         }
         return spent;
     }
+
 
     static BudgetDTO toDTO(Budget budget, BigDecimal spent, YearMonth period) {
         BigDecimal amount = budget.getAmount();

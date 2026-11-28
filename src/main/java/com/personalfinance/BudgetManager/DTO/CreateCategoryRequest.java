@@ -24,6 +24,5 @@ public class CreateCategoryRequest {
     @NotNull(message = "Category type cannot be null")
     private CategoryType type;
 
-    /** Grupa kategorii; można pominąć, gdy użytkownik należy do jednej grupy. */
     private Long groupId;
 }

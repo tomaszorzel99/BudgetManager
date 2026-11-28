@@ -17,6 +17,5 @@ public class UpdateUserRequest {
     @Size(min = 8, max = 64, message = "Password must be 8-64 characters")
     private String password;
 
-    /** Wymagane, gdy zmienia się e-mail albo hasło. */
     private String currentPassword;
 }

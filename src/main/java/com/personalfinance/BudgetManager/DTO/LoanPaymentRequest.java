@@ -7,11 +7,6 @@ import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/**
- * Rata, nadpłata albo wypłata z kredytu, z kwotami z wyciągu. {@code interestAmount} to odsetki
- * naliczone przez bank, {@code subsidyAmount} to ich część pokryta dopłatą państwa (nie schodzi z konta).
- * Puste kwoty = 0. {@code strategy} tylko przy nadpłacie; puste = domyślna strategia kredytu.
- */
 public record LoanPaymentRequest(
         @NotNull LoanPaymentKind kind,
         @NotNull LocalDate paymentDate,

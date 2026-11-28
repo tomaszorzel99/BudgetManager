@@ -14,7 +14,6 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     Optional<Category> findById(Long id);
     Optional<Category> findBySystemKey(String systemKey);
 
-    /** Kategorie systemowe i kategorie podanych grup. */
     @Query("SELECT c FROM Category c WHERE c.systemKey IS NOT NULL OR c.group.id IN :groupIds ORDER BY c.name")
     List<Category> findVisible(@Param("groupIds") Collection<Long> groupIds);
 

@@ -5,6 +5,7 @@ import com.personalfinance.BudgetManager.Exception.EmailException;
 import com.personalfinance.BudgetManager.Exception.InvalidCurrentPasswordException;
 import com.personalfinance.BudgetManager.Exception.UserException;
 import com.personalfinance.BudgetManager.Model.User;
+import com.personalfinance.BudgetManager.Model.UserGroup;
 import com.personalfinance.BudgetManager.Repositories.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +13,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.UUID;
 
 @Slf4j
@@ -36,9 +38,6 @@ public class UserService {
         return getUserByEmail(email);
     }
 
-//    public User getUserById(Long id) {
-//        return userRepository.findById(id).orElseThrow(() -> new UserException(id));
-//    }
 
     @Transactional
     public User updateUser(String currentEmail, UpdateUserRequest request) {
@@ -56,7 +55,21 @@ public class UserService {
         user.setName("DELETED");
         user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
         user.setEnabled(false);
+        handOverOwnedGroups(user);
         userRepository.save(user);
+    }
+
+    /** Grupy usuwanej osoby przechodzą na aktywnego członka z najniższym id (albo zostają bez właściciela). */
+    private static void handOverOwnedGroups(User leaving) {
+        for (UserGroup group : leaving.getUserGroups()) {
+            if (!group.isOwnedBy(leaving.getId())) {
+                continue;
+            }
+            group.setOwner(group.getUsers().stream()
+                    .filter(member -> member.isEnabled() && !member.getId().equals(leaving.getId()))
+                    .min(Comparator.comparing(User::getId))
+                    .orElse(null));
+        }
     }
 
     public void updateExistingUserWithPatch(User existingUser, UpdateUserRequest request) {

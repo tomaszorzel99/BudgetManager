@@ -8,7 +8,6 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 
-/** Miesięczny limit wydatków użytkownika na jedną kategorię (w jednej walucie). */
 @Entity
 @Table(name = "budgets",
         uniqueConstraints = @UniqueConstraint(name = "uk_budget_user_category_currency",

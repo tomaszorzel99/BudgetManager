@@ -10,10 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class HistoricalBalanceService {
@@ -31,11 +28,8 @@ public class HistoricalBalanceService {
         this.loanRepository = loanRepository;
     }
 
-    public BalanceAtDateDTO calculate(Long userId, LocalDate date){
-        // Wszystkie konta użytkownika, także założone później: saldo na dzień wynika z transakcji
-        // z datą ≤ date, więc konto z saldem początkowym cofniętym w czasie (kredyt, mieszkanie)
-        // pojawia się w historii od tej daty, a konto bez wcześniejszych operacji daje 0.
-        List<Account> accounts = accountRepository.findForHistoricalReport(userId);
+    public BalanceAtDateDTO calculate(Collection<Long> groupIds, LocalDate date){
+        List<Account> accounts = accountRepository.findForHistoricalReport(groupIds);
 
         if(accounts.isEmpty()){
             return new BalanceAtDateDTO(
@@ -124,13 +118,6 @@ public class HistoricalBalanceService {
                 date, currency, total, savings, investments, liabilities, property);
     }
 
-    /**
-     * Kredyt wpisany z saldem „stan na dzień” późniejszym niż start (np. hipoteka sprzed 3 lat
-     * dodana dziś): bez tego dług pojawiłby się w historii dopiero w dniu salda, a mieszkanie
-     * od dnia zakupu. Między startem a dniem salda dodajemy dług szacowany z harmonogramu
-     * ({@link LoanCalculator#estimatedOutstanding}). Od dnia salda liczą się już tylko transakcje.
-     * Niczego nie zapisujemy w bazie: to tylko widok historii.
-     */
     private void addEstimatedLoanDebt(List<Long> accountIds, LocalDate date, Map<Long, BigDecimal> balances) {
         List<Loan> loans = loanRepository.findByAccountIds(accountIds).stream()
                 .filter(l -> !date.isBefore(l.getStartDate()))

@@ -150,7 +150,6 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.BAD_REQUEST, "Invalid value for parameter: " + exception.getName(), request);
     }
 
-    /** Zły JSON, puste ciało żądania albo wartość nie do odczytania (np. "type":"FOO", "amount":"abc"). */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiError> handleUnreadableBody(HttpMessageNotReadableException exception, HttpServletRequest request) {
         if (exception.getCause() instanceof MismatchedInputException mismatch && !mismatch.getPath().isEmpty()) {
@@ -167,19 +166,16 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.BAD_REQUEST, "Missing required parameter: " + exception.getParameterName(), request);
     }
 
-    /** Np. month=13 albo 31 lutego: LocalDate.of rzuca DateTimeException. */
     @ExceptionHandler(DateTimeException.class)
     public ResponseEntity<ApiError> handleInvalidDate(DateTimeException exception, HttpServletRequest request) {
         return buildError(HttpStatus.BAD_REQUEST, "Invalid date: " + exception.getMessage(), request);
     }
 
-    /** Walidacja encji przy zapisie (np. pusta nazwa konta), gdy nie złapało jej DTO. */
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiError> handleConstraintViolation(ConstraintViolationException exception, HttpServletRequest request) {
         return buildError(HttpStatus.BAD_REQUEST, violationMessages(exception.getConstraintViolations()), request);
     }
 
-    /** Hibernate sprawdza encje dopiero przy zatwierdzaniu; wtedy błąd walidacji przychodzi opakowany. */
     @ExceptionHandler(TransactionSystemException.class)
     public ResponseEntity<ApiError> handleTransactionSystem(TransactionSystemException exception, HttpServletRequest request) {
         if (exception.getRootCause() instanceof ConstraintViolationException violation) {

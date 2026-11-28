@@ -1,6 +1,5 @@
 package com.personalfinance.BudgetManager.DTO;
 
-import com.personalfinance.BudgetManager.Model.UserGroup;
 import lombok.Data;
 
 import java.time.LocalDateTime;

@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
-/** Kredyty. Usunięcie i archiwizacja idą przez konto: /api/accounts/{accountId}. */
+
 @RestController
 @RequestMapping("/api/loans")
 public class LoanController {
@@ -50,8 +50,6 @@ public class LoanController {
         return ResponseEntity.ok(loanService.update(user.getId(), id, request));
     }
 
-    // ---------------------------------------------------------------- spłaty
-
     @GetMapping("/{id}/payments")
     public ResponseEntity<List<LoanPaymentDTO>> getPayments(
             @PathVariable Long id,
@@ -61,7 +59,6 @@ public class LoanController {
         return ResponseEntity.ok(paymentService.list(user.getId(), id, from, to));
     }
 
-    /** Podpowiedź kwot; bez daty: najbliższa rata albo nadpłata na dziś. */
     @GetMapping("/{id}/payments/suggest")
     public ResponseEntity<LoanPaymentSuggestionDTO> suggest(
             @PathVariable Long id,
@@ -92,7 +89,6 @@ public class LoanController {
         return ResponseEntity.noContent().build();
     }
 
-    /** Wyrównanie długu do kwoty „pozostało do spłaty” z wyciągu. */
     @PostMapping("/{id}/reconcile")
     public ResponseEntity<LoanDTO> reconcile(@PathVariable Long id, @Valid @RequestBody ReconcileLoanRequest request,
                                              @AuthenticationPrincipal CustomUserDetails user) {

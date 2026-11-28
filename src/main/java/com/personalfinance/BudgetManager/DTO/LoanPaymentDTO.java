@@ -6,7 +6,6 @@ import com.personalfinance.BudgetManager.Model.OverpaymentStrategy;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/** Spłata z podziałem na części; {@code outstandingAfter} to dług zaraz po tej operacji. */
 public record LoanPaymentDTO(
         Long id,
         Long loanId,
@@ -17,7 +16,6 @@ public record LoanPaymentDTO(
         BigDecimal subsidyAmount,
         BigDecimal interestPaid,
         BigDecimal feeAmount,
-        /** Ile zeszło z konta (spłata) albo na nie wpłynęło (wypłata). */
         BigDecimal payerAmount,
         OverpaymentStrategy strategy,
         Long payerAccountId,

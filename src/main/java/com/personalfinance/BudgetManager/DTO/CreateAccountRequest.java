@@ -36,7 +36,7 @@ public class CreateAccountRequest {
     @Digits(integer = 18, fraction = 2, message = "Amount can have at most 2 decimal places")
     private BigDecimal initialBalance;
 
-    /** Dzień, na który podano saldo początkowe (domyślnie dziś). Np. dzień zakupu mieszkania albo dodania kredytu. */
+
     @PastOrPresent(message = "Initial balance date cannot be in the future")
     private LocalDate initialBalanceDate;
 

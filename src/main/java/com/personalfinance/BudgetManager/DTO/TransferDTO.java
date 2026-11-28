@@ -28,6 +28,7 @@ public class TransferDTO {
     private BigDecimal exchangeRate;
     private String fromCurrency;
     private String toCurrency;
+    private Long userId;
 
     private String userName;
 

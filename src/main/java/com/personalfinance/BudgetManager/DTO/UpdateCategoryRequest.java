@@ -5,7 +5,6 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-/** Zmiana częściowa: pola null zostają bez zmian. */
 @Data
 public class UpdateCategoryRequest {
 

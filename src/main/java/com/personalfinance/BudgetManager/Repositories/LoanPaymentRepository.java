@@ -8,12 +8,12 @@ import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 public interface LoanPaymentRepository extends JpaRepository<LoanPayment, Long> {
 
-    /** Spłaty kredytu od najnowszej; przy tej samej dacie późniejszy zapis pierwszy. */
     @Query("SELECT p FROM LoanPayment p JOIN FETCH p.payerAccount " +
             "WHERE p.loan.id = :loanId " +
             "AND (:from IS NULL OR p.paymentDate >= :from) AND (:to IS NULL OR p.paymentDate <= :to) " +
@@ -25,29 +25,28 @@ public interface LoanPaymentRepository extends JpaRepository<LoanPayment, Long> 
     @Query("SELECT p FROM LoanPayment p WHERE p.id = :id AND p.loan.id = :loanId")
     Optional<LoanPayment> findByIdAndLoanId(@Param("id") Long id, @Param("loanId") Long loanId);
 
-    /** Ostatnia spłata (rata lub nadpłata) przed podanym dniem; od niej liczą się odsetki. */
     @Query("SELECT p FROM LoanPayment p WHERE p.loan.id = :loanId " +
             "AND p.kind <> com.personalfinance.BudgetManager.Model.LoanPaymentKind.DISBURSEMENT " +
             "AND p.paymentDate < :before " +
             "ORDER BY p.paymentDate DESC, p.id DESC")
     List<LoanPayment> findRepaymentsBefore(@Param("loanId") Long loanId, @Param("before") LocalDate before);
 
-    /** Suma kapitału danego rodzaju w okresie, po autorze operacji (jak pozostałe raporty). */
+
     @Query("SELECT COALESCE(SUM(p.principalAmount), 0) FROM LoanPayment p " +
-            "WHERE p.user.id = :userId AND p.kind = :kind " +
+            "WHERE p.loan.account.group.id IN :groupIds AND p.kind = :kind " +
             "AND p.paymentDate BETWEEN :startDate AND :endDate")
-    BigDecimal sumPrincipal(@Param("userId") Long userId,
+    BigDecimal sumPrincipal(@Param("groupIds") Collection<Long> groupIds,
                             @Param("kind") LoanPaymentKind kind,
                             @Param("startDate") LocalDate startDate,
                             @Param("endDate") LocalDate endDate);
 
     @Query("SELECT COALESCE(SUM(p.subsidyAmount), 0) FROM LoanPayment p " +
-            "WHERE p.user.id = :userId AND p.paymentDate BETWEEN :startDate AND :endDate")
-    BigDecimal sumSubsidy(@Param("userId") Long userId,
+            "WHERE p.loan.account.group.id IN :groupIds AND p.paymentDate BETWEEN :startDate AND :endDate")
+    BigDecimal sumSubsidy(@Param("groupIds") Collection<Long> groupIds,
                           @Param("startDate") LocalDate startDate,
                           @Param("endDate") LocalDate endDate);
 
-    /** Podsumowanie jednego kredytu: kapitał z rat, nadpłaty, wypłaty, odsetki, dopłaty, opłaty, liczba i daty spłat. */
+
     @Query("SELECT new com.personalfinance.BudgetManager.Repositories.LoanPaymentRepository$Totals(" +
             "COALESCE(SUM(CASE WHEN p.kind = com.personalfinance.BudgetManager.Model.LoanPaymentKind.INSTALLMENT THEN p.principalAmount ELSE 0 END), 0), " +
             "COALESCE(SUM(CASE WHEN p.kind = com.personalfinance.BudgetManager.Model.LoanPaymentKind.OVERPAYMENT THEN p.principalAmount ELSE 0 END), 0), " +

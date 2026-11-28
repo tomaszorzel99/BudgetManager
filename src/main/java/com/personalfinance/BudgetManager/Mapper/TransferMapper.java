@@ -28,6 +28,7 @@ public class TransferMapper {
         transferDTO.setToAccountName(transfer.getToAccount().getName());
         transferDTO.setToAccountType(transfer.getToAccount().getAccountType());
 
+        transferDTO.setUserId(transfer.getUser().getId());
         transferDTO.setUserName(transfer.getUser().getName());
 
         transferDTO.setCreatedAt(transfer.getCreatedAt());

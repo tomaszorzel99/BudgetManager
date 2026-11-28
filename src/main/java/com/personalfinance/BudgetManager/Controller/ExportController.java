@@ -26,7 +26,6 @@ public class ExportController {
         this.exportService = exportService;
     }
 
-    /** format=csv (same transakcje) albo xlsx (transakcje, podsumowanie miesięczne, przelewy). */
     @GetMapping("/transactions")
     public ResponseEntity<byte[]> exportTransactions(
             @RequestParam(defaultValue = "xlsx") String format,

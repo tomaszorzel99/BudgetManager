@@ -39,12 +39,20 @@ public class UserGroupService {
         }
     }
 
+    /** Zaproszenia, archiwizacja i usuwanie kont: tylko właściciel grupy. */
+    public static void ensureUserIsOwner(User user, UserGroup group) {
+        if (!group.isOwnedBy(user.getId())) {
+            throw new AccessDeniedException("Only the group owner can do this");
+        }
+    }
+
     @Transactional
     public UserGroup createGroup(CreateGroupRequest request) {
         User currentUser = userService.getCurrentUser();
 
         UserGroup userGroup = new UserGroup();
         userGroup.setName(request.getGroupName());
+        userGroup.setOwner(currentUser);
         userGroupRepository.save(userGroup);
 
         currentUser.getUserGroups().add(userGroup);

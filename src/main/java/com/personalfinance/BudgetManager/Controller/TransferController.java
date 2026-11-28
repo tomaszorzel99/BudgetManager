@@ -4,7 +4,6 @@ import com.personalfinance.BudgetManager.DTO.CreateTransferRequest;
 import com.personalfinance.BudgetManager.DTO.TransferDTO;
 import com.personalfinance.BudgetManager.Mapper.TransferMapper;
 import com.personalfinance.BudgetManager.Model.Transfer;
-import com.personalfinance.BudgetManager.Repositories.TransferRepository;
 import com.personalfinance.BudgetManager.Services.TransferService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -38,8 +37,11 @@ public class TransferController {
             @RequestParam(required = false) Long accountId,
             @RequestParam(required = false) Integer month,
             @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Long groupId,
+            @RequestParam(defaultValue = "false") boolean mine,
             @AuthenticationPrincipal UserDetails userDetails) {
-        List<Transfer> transfers = transferService.getTransfers(userDetails.getUsername(), accountId, month, year);
+        List<Transfer> transfers = transferService.getTransfers(userDetails.getUsername(), accountId, month, year,
+                groupId, mine);
 
         return ResponseEntity.ok(transferMapper.convertToDTOList(transfers));
     }
@@ -57,9 +59,9 @@ public class TransferController {
             @PathVariable Long id,
             @Valid @RequestBody CreateTransferRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
-                Transfer transfer = transferService.updateTransfer(id, request, userDetails.getUsername());
-                return ResponseEntity.ok(transferMapper.convertToDTO(transfer));
-            }
+        Transfer transfer = transferService.updateTransfer(id, request, userDetails.getUsername());
+        return ResponseEntity.ok(transferMapper.convertToDTO(transfer));
+    }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTransfer(

@@ -19,7 +19,6 @@ public class AccountDTO {
     private List<String> users;
     private Long groupId;
     private String groupName;
-    /** true dla konta zarchiwizowanego (deletedAt != null). */
     private boolean archived;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

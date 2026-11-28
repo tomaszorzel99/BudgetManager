@@ -26,7 +26,6 @@ public interface RecurringTransactionRepository extends JpaRepository<RecurringT
     boolean existsByAccountId(Long accountId);
     boolean existsByCategoryId(Long categoryId);
 
-    /** Przeniesienie podkategorii do innej kategorii: stałe wydatki z tą podkategorią idą razem z nią. */
     @Modifying(flushAutomatically = true)
     @Query("UPDATE RecurringTransaction r SET r.category = :category WHERE r.subcategory.id = :subcategoryId")
     int moveSubcategoryToCategory(@Param("subcategoryId") Long subcategoryId, @Param("category") Category category);

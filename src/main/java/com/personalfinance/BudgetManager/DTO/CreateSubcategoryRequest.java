@@ -17,10 +17,5 @@ public class CreateSubcategoryRequest {
 
     @NotNull(message = "Category id cannot be null")
     private Long categoryId;
-
-    /**
-     * Grupa podkategorii, potrzebna tylko pod kategorią systemową (kategoria grupy wyznacza grupę sama);
-     * można pominąć, gdy użytkownik należy do jednej grupy.
-     */
     private Long groupId;
 }

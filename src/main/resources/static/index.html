@@ -460,7 +460,7 @@
         view:'dashboard', currency:null,
         txMonth:{m:now.getMonth()+1, y:now.getFullYear()}, txAll:false,
         txType:'ALL', txCat:'', txAcc:'', txSearch:'', txScope:'',
-        trMonth:{m:now.getMonth()+1, y:now.getFullYear()}, trAll:true, trAcc:'',
+        trMonth:{m:now.getMonth()+1, y:now.getFullYear()}, trAll:true, trAcc:'', trScope:'',
         repMonth:{m:now.getMonth()+1, y:now.getFullYear()}, repTab:'overview',
         trendRange:12, cmpType:'EXPENSE', cmpMonths:6, topPeriod:'month', topMode:'desc',
         budMonth:{m:now.getMonth()+1, y:now.getFullYear()}, recMonth:{m:now.getMonth()+1, y:now.getFullYear()},
@@ -580,6 +580,15 @@
     function groupName(id){ return (S.user?.groups||[]).find(g=>g.id===id)?.name || ''; }
     function multiGroup(){ return (S.user?.groups||[]).length > 1; }
     function catLabel(c){ return c.name + (multiGroup() && c.groupId!=null ? ' · ' + groupName(c.groupId) : ''); }
+    // Właściciel grupy zaprasza, archiwizuje i usuwa konta oraz może zmieniać wpisy innych członków.
+    function isGroupOwner(groupId){ const g = (S.user?.groups||[]).find(x=>x.id===groupId); return !!g && g.ownerId!=null && g.ownerId===S.user?.id; }
+    function canChangeEntry(authorId, accountId){ return authorId==null || authorId===S.user?.id || isGroupOwner(accById(accountId)?.groupId); }
+    // Zakres listy: '' = wszystkie grupy, 'mine' = tylko moje wpisy, id = jedna grupa.
+    function scopeParams(scope){ return scope==='mine' ? {mine:true} : {groupId:scope}; }
+    function scopeSelect(id, scope){
+        const groups = S.user?.groups||[]; if (!groups.length) return '';
+        return `<select class="input" id="${id}" title="Czyje wpisy pokazać"><option value="">${groups.length>1?'Wszystkie grupy':'Cała grupa'}</option><option value="mine" ${scope==='mine'?'selected':''}>Tylko moje</option>${groups.length>1?groups.map(g=>`<option value="${g.id}" ${String(scope)===String(g.id)?'selected':''}>Grupa: ${esc(g.name)}</option>`).join(''):''}</select>`;
+    }
     function subsOf(cat, groupId){ return S.subcategories.filter(s=>(s.categoryId!=null ? s.categoryId===cat.id : s.categoryName===cat.name) && usableIn(s, groupId)); }
     const NO_SUB = 'Bez podkategorii';
     function subOptions(subs, selectedId){
@@ -625,6 +634,9 @@
     }
     const qs = o => { const p = Object.entries(o).filter(([,v])=>v!==undefined&&v!==null&&v!==''); return p.length ? '?'+p.map(([k,v])=>`${k}=${encodeURIComponent(v)}`).join('&') : ''; };
     const ERR_PL = [
+        [/Only the author or the group owner/i,'Zmienić lub usunąć ten wpis może tylko jego autor albo właściciel grupy.'],
+        [/Page must be/i,'Nieprawidłowy numer lub rozmiar strony.'],
+        [/start date must not be after/i,'Data początkowa nie może być późniejsza niż końcowa.'],
         [/in use/i,'Ta kategoria ma transakcje, budżety albo stałe wydatki, więc nie można jej usunąć ani zmienić jej typu.'],
         [/reserved for the system/i,'Ten typ kategorii jest zarezerwowany dla salda początkowego.'],
         [/same type/i,'Podkategorię można przenieść tylko do kategorii tego samego typu.'],
@@ -1029,16 +1041,15 @@
     async function viewTransactions(){
         setHeader('Transakcje', 'Przychody, wydatki i korekty', `<button class="btn btn-ghost" id="t-exp">${icon('download')}Eksport</button><button class="btn btn-primary" id="t-add">${icon('plus')}Dodaj transakcję</button>`);
         $('#t-add').onclick = ()=>txModal(); $('#t-exp').onclick = ()=>exportModal();
-        const groups = S.user?.groups||[];
         const c = $('#content');
         c.innerHTML = `
     <div class="toolbar">
       <div class="month-nav"><button class="icon-btn" id="t-prev">${icon('left')}</button><b id="t-month"></b><button class="icon-btn" id="t-next">${icon('right')}</button></div>
       <div class="seg" id="t-type">${[['ALL','Wszystkie'],['INCOME','Przychody'],['EXPENSE','Wydatki'],['ADJUSTMENT','Korekty']].map(([k,n])=>`<button data-k="${k}" class="${S.txType===k?'on':''}">${n}</button>`).join('')}</div>
       <div class="search">${icon('search')}<input class="input" id="t-search" placeholder="Szukaj opisu, kategorii…" value="${esc(S.txSearch)}"></div>
-            <select class="input" id="t-cat"><option value="">Wszystkie kategorie</option>${S.categories.filter(c=>c.type!=='INITIAL_BALANCE').map(c=>`<option value="${c.id}" ${String(S.txCat)===String(c.id)?'selected':''}>${esc(catLabel(c))}</option>`).join('')}</select>
+      <select class="input" id="t-cat"><option value="">Wszystkie kategorie</option>${S.categories.filter(c=>c.type!=='INITIAL_BALANCE').map(c=>`<option value="${c.id}" ${String(S.txCat)===String(c.id)?'selected':''}>${esc(catLabel(c))}</option>`).join('')}</select>
       <select class="input" id="t-acc"><option value="">Wszystkie konta</option>${S.accounts.map(a=>`<option value="${a.id}" ${String(S.txAcc)===String(a.id)?'selected':''}>${esc(a.name)}</option>`).join('')}</select>
-      ${groups.length?`<select class="input" id="t-scope"><option value="">Tylko moje</option>${groups.map(g=>`<option value="${g.id}" ${String(S.txScope)===String(g.id)?'selected':''}>Grupa: ${esc(g.name)}</option>`).join('')}</select>`:''}
+      ${scopeSelect('t-scope', S.txScope)}
     </div>
     <div class="card" id="t-list"><div class="card-b">${'<div class="skeleton" style="height:18px;margin:14px 0"></div>'.repeat(6)}</div></div>`;
         const upd = ()=>{ $('#t-month').textContent = S.txAll ? 'Cały okres' : monthLabel(S.txMonth); $('#t-next').disabled = !S.txAll && isFuture(shiftMonth(S.txMonth,1)); };
@@ -1047,36 +1058,46 @@
         $('#t-next').onclick = ()=>{ if(S.txAll) return; const n=shiftMonth(S.txMonth,1); if(isFuture(n)){ S.txAll=true; } else S.txMonth=n; upd(); loadTx(); };
         $('#t-month').ondblclick = ()=>{ S.txAll=!S.txAll; upd(); loadTx(); };
         $('#t-month').title = 'Kliknij dwukrotnie, aby pokazać cały okres';
-        $$('#t-type button').forEach(b=>b.onclick=()=>{ S.txType=b.dataset.k; $$('#t-type button').forEach(x=>x.classList.toggle('on',x===b)); drawTx(); });
-        $('#t-search').oninput = e=>{ S.txSearch=e.target.value; drawTx(); };
+        $$('#t-type button').forEach(b=>b.onclick=()=>{ S.txType=b.dataset.k; $$('#t-type button').forEach(x=>x.classList.toggle('on',x===b)); loadTx(); });
+        let searchTimer; // szukanie idzie do serwera, więc czekamy, aż użytkownik przestanie pisać
+        $('#t-search').oninput = e=>{ S.txSearch=e.target.value; clearTimeout(searchTimer); searchTimer = setTimeout(loadTx, 300); };
         $('#t-cat').onchange = e=>{ S.txCat=e.target.value; loadTx(); };
-        $('#t-acc').onchange = e=>{ S.txAcc=e.target.value; drawTx(); };
+        $('#t-acc').onchange = e=>{ S.txAcc=e.target.value; loadTx(); };
         if ($('#t-scope')) $('#t-scope').onchange = e=>{ S.txScope=e.target.value; loadTx(); };
         await loadTx();
     }
-    let txRows = [];
-    async function loadTx(){
+    let txRows = [], txPage = null, txSeq = 0;
+    const TX_PAGE_SIZE = 50;
+    // Lista po stronach: filtruje i liczy sumy serwer, „Pokaż więcej” dokleja następną stronę.
+    async function loadTx(more=false){
+        const seq = ++txSeq;
+        const range = S.txAll ? {} : monthRange(S.txMonth);
         try {
-            txRows = await api('GET','/api/transactions'+qs({month:S.txAll?'':S.txMonth.m, year:S.txAll?'':S.txMonth.y, groupId:S.txScope, categoryId:S.txCat})) || [];
-        } catch(err){ txRows=[]; toast(err.message,'err'); }
+            const p = await api('GET','/api/transactions/page'+qs({page:more&&txPage?txPage.page+1:0, size:TX_PAGE_SIZE,
+                from:range.from, to:range.to, type:S.txType==='ALL'?'':S.txType, categoryId:S.txCat, accountId:S.txAcc,
+                q:S.txSearch.trim(), ...scopeParams(S.txScope)}));
+            if (seq!==txSeq) return; // w międzyczasie zmienił się filtr, liczy się nowsze zapytanie
+            txRows = more ? txRows.concat(p?.content||[]) : (p?.content||[]);
+            txPage = p;
+        } catch(err){
+            if (seq!==txSeq) return;
+            if (!more){ txRows=[]; txPage=null; }
+            toast(err.message,'err');
+        }
         if (S.view==='transactions') drawTx();
     }
     function drawTx(){
-        const q = S.txSearch.trim().toLowerCase();
-        let rows = txRows.filter(t=>
-            (S.txType==='ALL' || t.type===S.txType) &&
-            (!S.txAcc || String(t.accountId)===String(S.txAcc)) &&
-            (!q || [t.description,t.categoryName,t.subcategoryName,t.accountName,t.userName,String(t.amount)].some(x=>String(x||'').toLowerCase().includes(q))));
-        rows.sort((a,b)=>String(b.transactionDate).localeCompare(String(a.transactionDate)) || b.id-a.id);
+        const rows = txRows; // serwer zwraca już przefiltrowane i posortowane od najnowszych
         const box = $('#t-list'); if(!box) return;
-        if (!rows.length) { box.innerHTML = emptyState('list','Brak transakcji', txRows.length ? 'Żadna transakcja nie pasuje do filtrów.' : `Nie ma transakcji ${S.txAll?'':'w okresie '+monthLabel(S.txMonth)}.`, `<button class="btn btn-primary btn-sm" onclick="txModal()">${icon('plus')}Dodaj transakcję</button>`); return; }
-        const byCur = {};
-        rows.forEach(t=>{ const cu = accCur(t.accountId)||S.currency; byCur[cu] = byCur[cu]||{inc:0,exp:0}; if(t.type==='INCOME') byCur[cu].inc+=num(t.amount); if(t.type==='EXPENSE') byCur[cu].exp+=num(t.amount); });
-        const strip = Object.entries(byCur).map(([cu,v])=>`
-    <div><span>Przychody${Object.keys(byCur).length>1?' '+cu:''}</span><b class="num pos">${fmtMoney(v.inc,cu)}</b></div>
-    <div><span>Wydatki</span><b class="num neg">${fmtMoney(v.exp,cu)}</b></div>
-    <div><span>Bilans</span><b class="num ${v.inc-v.exp>=0?'pos':'neg'}">${fmtMoney(v.inc-v.exp,cu)}</b></div>`).join('');
-        let html = `<div class="sum-strip">${strip}<div><span>Liczba</span><b class="num">${rows.length}</b></div></div>`;
+        const filtered = S.txType!=='ALL' || S.txCat || S.txAcc || S.txSearch.trim() || S.txScope;
+        if (!rows.length) { box.innerHTML = emptyState('list','Brak transakcji', filtered ? 'Żadna transakcja nie pasuje do filtrów.' : `Nie ma transakcji ${S.txAll?'':'w okresie '+monthLabel(S.txMonth)}.`, `<button class="btn btn-primary btn-sm" onclick="txModal()">${icon('plus')}Dodaj transakcję</button>`); return; }
+        // Sumy liczy serwer dla całego filtra, nie tylko dla wczytanych stron.
+        const totals = (txPage?.totals||[]).filter(v=>num(v.income) || num(v.expense));
+        const strip = totals.map(v=>{ const cu=v.currency, inc=num(v.income), exp=num(v.expense); return `
+    <div><span>Przychody${totals.length>1?' '+cu:''}</span><b class="num pos">${fmtMoney(inc,cu)}</b></div>
+    <div><span>Wydatki</span><b class="num neg">${fmtMoney(exp,cu)}</b></div>
+    <div><span>Bilans</span><b class="num ${inc-exp>=0?'pos':'neg'}">${fmtMoney(inc-exp,cu)}</b></div>`; }).join('');
+        let html = `<div class="sum-strip">${strip}<div><span>Liczba</span><b class="num">${txPage?.totalElements ?? rows.length}</b></div></div>`;
         let day = null, dayTotal = {};
         const groups = [];
         rows.forEach(t=>{ if (t.transactionDate!==day){ day=t.transactionDate; groups.push({day, items:[]}); } groups[groups.length-1].items.push(t); });
@@ -1086,6 +1107,7 @@
                 const tt = TX_TYPES[t.type]||{n:t.type,c:'n'}, col = catColor(t.categoryName), cu = accCur(t.accountId);
                 const locked = t.type==='INITIAL_BALANCE' || t.type==='LIABILITY_OPENING';
                 const valuation = isProperty(accById(t.accountId)); // wycenę zmienia się nową wyceną, nie edycją
+                const mayChange = canChangeEntry(t.userId, t.accountId); // autor albo właściciel grupy
 
                 return `<div class="tx-row">
         <div class="tx-who"><span class="cat-ico" style="background:${hexA(col,.14)};color:${col}">${esc(initials(t.categoryName).slice(0,1))}</span>
@@ -1094,10 +1116,14 @@
         <div class="c-cat"><span class="pill"><span class="dot" style="background:${col}"></span>${esc(t.categoryName)}${t.subcategoryName?` <span class="faint">/ ${esc(t.subcategoryName)}</span>`:''}</span></div>
         <div class="c-acc muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.accountName)}</div>
         <div class="num" style="text-align:right;font-weight:600"><span class="${signed(t)<0?'':'pos'}">${signed(t)<0?'−':'+'}${fmtMoney(Math.abs(num(t.amount)),cu)}</span></div>
-        <div class="acts">${locked?'':`${t.type==='INCOME'||t.type==='EXPENSE'?`<button class="icon-btn" title="Ustaw jako cykliczną" onclick="recurringFromTx(${t.id})">${icon('repeat')}</button>`:''}${valuation?'':`<button class="icon-btn" title="Edytuj" onclick="txModal(${t.id})">${icon('edit')}</button>`}<button class="icon-btn danger" title="Usuń" onclick="deleteTx(${t.id})">${icon('trash')}</button>`}</div>
+        <div class="acts">${locked?'':`${t.type==='INCOME'||t.type==='EXPENSE'?`<button class="icon-btn" title="Ustaw jako cykliczną" onclick="recurringFromTx(${t.id})">${icon('repeat')}</button>`:''}${valuation||!mayChange?'':`<button class="icon-btn" title="Edytuj" onclick="txModal(${t.id})">${icon('edit')}</button>`}${mayChange?`<button class="icon-btn danger" title="Usuń" onclick="deleteTx(${t.id})">${icon('trash')}</button>`:''}`}</div>
       </div>`; }).join('');
         }).join('');
+        const left = (txPage?.totalElements||0) - rows.length;
+        if (left > 0) html += `<div class="card-b" style="text-align:center"><button class="btn btn-ghost btn-sm" id="t-more">Pokaż więcej (zostało ${left})</button></div>`;
         box.innerHTML = html;
+        const more = $('#t-more');
+        if (more) more.onclick = ()=>{ more.disabled = true; more.textContent = 'Wczytywanie…'; loadTx(true); };
     }
 
     function txModal(id){
@@ -1180,6 +1206,7 @@
     <div class="toolbar">
       <div class="month-nav"><button class="icon-btn" id="tr-prev">${icon('left')}</button><b id="tr-month"></b><button class="icon-btn" id="tr-next">${icon('right')}</button></div>
       <select class="input" id="tr-acc"><option value="">Wszystkie konta</option>${S.accounts.map(a=>`<option value="${a.id}" ${String(S.trAcc)===String(a.id)?'selected':''}>${esc(a.name)}</option>`).join('')}</select>
+      ${scopeSelect('tr-scope', S.trScope)}
     </div>
     <div class="card" id="tr-list"><div class="card-b">${'<div class="skeleton" style="height:18px;margin:14px 0"></div>'.repeat(4)}</div></div>`;
         const upd = ()=>{ $('#tr-month').textContent = S.trAll ? 'Cały okres' : monthLabel(S.trMonth); };
@@ -1187,10 +1214,11 @@
         $('#tr-prev').onclick = ()=>{ if(S.trAll){ S.trAll=false; S.trMonth={m:now.getMonth()+1,y:now.getFullYear()}; } else S.trMonth=shiftMonth(S.trMonth,-1); upd(); loadTr(); };
         $('#tr-next').onclick = ()=>{ if(S.trAll) return; const n=shiftMonth(S.trMonth,1); if(isFuture(n)) S.trAll=true; else S.trMonth=n; upd(); loadTr(); };
         $('#tr-acc').onchange = e=>{ S.trAcc=e.target.value; loadTr(); };
+        if ($('#tr-scope')) $('#tr-scope').onchange = e=>{ S.trScope=e.target.value; loadTr(); };
         await loadTr();
     }
     async function loadTr(){
-        try { trRows = await api('GET','/api/transfers'+qs({accountId:S.trAcc, month:S.trAll?'':S.trMonth.m, year:S.trAll?'':S.trMonth.y})) || []; }
+        try { trRows = await api('GET','/api/transfers'+qs({accountId:S.trAcc, month:S.trAll?'':S.trMonth.m, year:S.trAll?'':S.trMonth.y, ...scopeParams(S.trScope)})) || []; }
         catch(err){ trRows=[]; toast(err.message,'err'); }
         if (S.view!=='transfers') return;
         const rows = [...trRows].sort((a,b)=>String(b.transferDate).localeCompare(String(a.transferDate)) || b.id-a.id);
@@ -1204,7 +1232,7 @@
       <div class="main-t"><div class="t1" style="display:flex;align-items:center;gap:6px">${esc(t.fromAccountName)} <span class="faint">${icon('arrow')}</span> ${esc(t.toAccountName)}</div>
         <div class="t2">${fmtDate(t.transferDate)}${t.description?' · '+esc(t.description):''}${t.userName?' · '+esc(t.userName):''}${fx?` · kurs ${num(t.exchangeRate)}`:''}</div></div>
       <div class="amt num"><div>${fmtMoney(t.amount,t.fromCurrency)}</div>${fx?`<div class="faint" style="font-size:12px;font-weight:500">→ ${fmtMoney(t.receivedAmount,t.toCurrency)}</div>`:''}</div>
-      <div class="acts"><button class="icon-btn" title="Edytuj" onclick="transferModal(${t.id})">${icon('edit')}</button><button class="icon-btn danger" title="Cofnij" onclick="deleteTransfer(${t.id})">${icon('trash')}</button></div>
+            <div class="acts">${canChangeEntry(t.userId, t.fromAccountId)?`<button class="icon-btn" title="Edytuj" onclick="transferModal(${t.id})">${icon('edit')}</button><button class="icon-btn danger" title="Cofnij" onclick="deleteTransfer(${t.id})">${icon('trash')}</button>`:''}</div>
     </div>`; }).join('')}</div>`;
     }
     function transferModal(id){
@@ -1292,7 +1320,7 @@
         }).join('');
         if (S.archived.length){
             html += `<details class="card acc-group" style="padding:0"><summary class="acc-group-h" style="cursor:pointer;list-style:none"><span class="cat-ico ico" style="width:32px;height:32px;background:var(--surface-2);color:var(--text-3)">${icon('archive')}</span><h3>Zarchiwizowane (${S.archived.length})</h3><span class="faint">pokaż</span></summary>
-      ${S.archived.map(a=>`<div class="acc-row" style="opacity:.7;cursor:pointer" onclick="accountHistoryModal(${a.id})" title="Historia salda"><div class="main-t" style="flex:1"><div style="font-weight:600">${esc(a.name)}</div><div class="faint" style="font-size:12.5px">${ACC_TYPES[a.accountType]?.n||''} · ${esc(a.groupName||'')}</div></div><b class="num">${fmtMoney(a.balance,a.currency)}</b><button class="btn btn-ghost btn-sm" style="margin-left:12px" title="Przywróć z archiwum" onclick="event.stopPropagation();unarchiveAccount(${a.id})">${icon('archive')}Przywróć</button></div>`).join('')}</details>`;
+      ${S.archived.map(a=>`<div class="acc-row" style="opacity:.7;cursor:pointer" onclick="accountHistoryModal(${a.id})" title="Historia salda"><div class="main-t" style="flex:1"><div style="font-weight:600">${esc(a.name)}</div><div class="faint" style="font-size:12.5px">${ACC_TYPES[a.accountType]?.n||''} · ${esc(a.groupName||'')}</div></div><b class="num">${fmtMoney(a.balance,a.currency)}</b>${isGroupOwner(a.groupId)?`<button class="btn btn-ghost btn-sm" style="margin-left:12px" title="Przywróć z archiwum" onclick="event.stopPropagation();unarchiveAccount(${a.id})">${icon('archive')}Przywróć</button>`:''}</div>`).join('')}</details>`;
         }
         c.innerHTML = html;
     }
@@ -1303,7 +1331,7 @@
             <div class="faint" style="font-size:12.5px">${esc(a.groupName||'')} · ${esc((a.currency||'').toUpperCase())}${a.updatedAt?' · zaktualizowano '+fmtDate(a.updatedAt):''}</div></div>
     <div class="avatars" title="${esc(users.join(', '))}">${users.slice(0,4).map(u=>`<span class="avatar sm" style="background:${avatarColor(u)}">${esc(initials(u))}</span>`).join('')}</div>
     <b class="num" style="min-width:120px;text-align:right;font-size:15px">${fmtMoney(a.balance,a.currency)}</b>
-    <div class="acts"><button class="icon-btn" title="Historia salda" onclick="accountHistoryModal(${a.id})">${icon('history')}</button><button class="icon-btn" title="Edytuj" onclick="accountModal(${a.id})">${icon('edit')}</button>${isLoan(a)?'':isProperty(a)?`<button class="icon-btn" title="Nowa wycena" onclick="propertyValueModal(${a.id})">${icon('home')}</button>`:`<button class="icon-btn" title="Korekta salda" onclick="adjustModal(${a.id})">${icon('scale')}</button>`}<button class="icon-btn" title="Archiwizuj" onclick="archiveAccount(${a.id})">${icon('archive')}</button><button class="icon-btn danger" title="Usuń" onclick="deleteAccount(${a.id})">${icon('trash')}</button></div>
+    <div class="acts"><button class="icon-btn" title="Historia salda" onclick="accountHistoryModal(${a.id})">${icon('history')}</button><button class="icon-btn" title="Edytuj" onclick="accountModal(${a.id})">${icon('edit')}</button>${isLoan(a)?'':isProperty(a)?`<button class="icon-btn" title="Nowa wycena" onclick="propertyValueModal(${a.id})">${icon('home')}</button>`:`<button class="icon-btn" title="Korekta salda" onclick="adjustModal(${a.id})">${icon('scale')}</button>`}${isGroupOwner(a.groupId)?`<button class="icon-btn" title="Archiwizuj" onclick="archiveAccount(${a.id})">${icon('archive')}</button><button class="icon-btn danger" title="Usuń" onclick="deleteAccount(${a.id})">${icon('trash')}</button>`:''}</div>
   </div>`;
     }
     async function editLoanOfAccount(accountId){
@@ -1652,12 +1680,14 @@
         const groups = S.user?.groups||[];
         $('#content').innerHTML = `
     ${groups.length ? `<div class="grid g-2 mb">${groups.map(g=>{
-                const accs = S.accounts.filter(a=>a.groupName===g.name);
-                const members = [...new Set(accs.flatMap(a=>a.users||[]))];
-                return `<div class="card"><div class="card-h"><span class="cat-ico ico o">${icon('users')}</span><h3>${esc(g.name)}</h3><button class="btn btn-ghost btn-sm" onclick="inviteModal(${g.id})">${icon('plus')}Zaproś</button></div>
+                const accs = S.accounts.filter(a=>a.groupId===g.id);
+                const members = g.members?.length ? g.members : [{id:S.user.id, name:S.user.name}];
+                const owner = members.find(u=>u.id===g.ownerId);
+                return `<div class="card"><div class="card-h"><span class="cat-ico ico o">${icon('users')}</span><h3>${esc(g.name)}</h3>${isGroupOwner(g.id)?`<button class="btn btn-ghost btn-sm" onclick="inviteModal(${g.id})">${icon('plus')}Zaproś</button>`:''}</div>
         <div class="card-b">
           <div class="faint" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Członkowie</div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">${(members.length?members:[S.user.name]).map(u=>`<span class="pill" style="padding:3px 10px 3px 3px"><span class="avatar sm" style="background:${avatarColor(u)};border:none;width:22px;height:22px;font-size:10px">${esc(initials(u))}</span>${esc(u)}</span>`).join('')}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:${!isGroupOwner(g.id)&&owner?'8':'16'}px">${members.map(u=>`<span class="pill" style="padding:3px 10px 3px 3px"><span class="avatar sm" style="background:${avatarColor(u.name)};border:none;width:22px;height:22px;font-size:10px">${esc(initials(u.name))}</span>${esc(u.name)}${u.id===g.ownerId?' <span class="chip g" style="padding:0 6px;font-size:11px">właściciel</span>':''}</span>`).join('')}</div>
+          ${!isGroupOwner(g.id)&&owner?`<div class="hint" style="margin-bottom:16px">Zapraszać i archiwizować konta może właściciel: ${esc(owner.name)}.</div>`:''}
           <div class="faint" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Konta (${accs.length})</div>
           ${accs.length ? accs.map(a=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-top:1px solid var(--border)"><span>${esc(a.name)}</span><b class="num">${fmtMoney(a.balance,a.currency)}</b></div>`).join('') : '<div class="muted" style="padding:6px 0">Brak kont w tej grupie.</div>'}
         </div></div>`; }).join('')}</div>`
@@ -1665,7 +1695,7 @@
     <div class="card"><div class="card-b" style="display:flex;gap:16px;align-items:flex-start">
       <span class="cat-ico ico b">${icon('key')}</span>
       <div><b>Jak zaprosić kogoś do grupy?</b><ol class="muted" style="margin:6px 0 0 18px;display:flex;flex-direction:column;gap:3px">
-        <li>Kliknij „Zaproś” przy grupie i podaj e-mail tej osoby.</li><li>Skopiuj wygenerowany token i przekaż go zaproszonej osobie.</li>
+        <li>Kliknij „Zaproś” przy grupie i podaj e-mail tej osoby (przycisk widzi właściciel grupy).</li><li>Skopiuj wygenerowany token i przekaż go zaproszonej osobie.</li>
         <li>Osoba loguje się na swoje konto, wybiera „Dołącz przez token” i wkleja token.</li></ol></div></div></div>`;
     }
     function groupModal(){
